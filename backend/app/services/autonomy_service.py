@@ -341,7 +341,7 @@ def _proactive_player_contact(session: Session, moment: datetime) -> int:
 def simulate_social_life(session: Session, from_dt: datetime, until_dt: datetime) -> dict:
     """Avança a vida social em fatias, em vez de gerar um único pulso no retorno."""
     if until_dt <= from_dt:
-        return {"interactions": 0, "posts": 0, "comments": 0, "likes": 0, "locations": 0}
+        return {"interactions": 0, "posts": 0, "comments": 0, "likes": 0, "locations": 0, "activities": 0, "proactive_dms": 0}
 
     npcs = session.exec(select(Character).where(Character.is_npc.is_(True))).all()
     _npc_social_graph(session, npcs)
@@ -441,4 +441,6 @@ def simulate_social_life(session: Session, from_dt: datetime, until_dt: datetime
         "comments": comments,
         "likes": likes,
         "locations": locations,
+        "activities": activities,
+        "proactive_dms": proactive_dms,
     }
