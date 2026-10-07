@@ -1176,3 +1176,18 @@ Considerar a camada concluída somente quando, depois de algumas horas sem inter
 - DM iniciado por NPC.
 
 O objetivo não é reproduzir Status visualmente. O objetivo é reproduzir a propriedade comportamental que torna uma rede social simulada convincente: **quando o jogador volta, ele encontra uma sociedade que continuou existindo sem ele.**
+
+
+## V4 — Cidade socialmente auto-organizada
+
+A camada social agora deve transformar relações em comportamento: NPCs mantêm e rompem follows, iniciam DMs, criam encontros, aceitam convites, reagem a publicações, espalham rumores, ganham ou perdem visibilidade e deixam a tensão esfriar quando não há contato. O jogador deve retornar a um mundo que produziu consequências sem ele.
+
+Regras adicionais:
+- personalidade, objetivos, compatibilidade, localização e arco social influenciam ações;
+- NPC↔NPC deve continuar funcionando sem o jogador;
+- ações sociais precisam deixar memória e/ou consequência persistente;
+- atividades ambientais podem terminar sozinhas;
+- feed pode priorizar relevância social sem substituir o histórico cronológico;
+- “Enquanto você estava fora” deve destacar acontecimentos novos e socialmente relevantes;
+- decisões de domínio continuam pertencendo ao backend; LLM só escreve superfície narrativa;
+- toda autonomia precisa de limites diários, dedupe e comportamento determinístico suficiente para catch-up seguro.
