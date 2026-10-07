@@ -5,7 +5,7 @@ from datetime import datetime, time, timezone
 
 from sqlmodel import Session, select
 
-from app.models import SimulationLog, WorldState
+from app.models import Character, FutureHook, SimulationLog, WorldState
 from app.models.base import utcnow
 
 logger = logging.getLogger("viva.simulation")
@@ -24,6 +24,39 @@ def compute_elapsed_minutes(session: Session) -> int:
 def _combine(state: WorldState) -> datetime:
     return datetime.combine(state.current_date, time.fromisoformat(state.current_time), tzinfo=timezone.utc)
 
+
+def process_due_future_hooks(session: Session) -> list[str]:
+    """Entrega consequências sociais que amadureceram enquanto o app estava fechado."""
+    from app.services.messaging_service import send_npc_initiative
+
+    now = utcnow()
+    hooks = session.exec(
+        select(FutureHook).where(
+            FutureHook.status == "PENDING",
+            FutureHook.due_at.is_not(None),
+            FutureHook.due_at <= now,
+        ).order_by(FutureHook.due_at.asc()).limit(20)
+    ).all()
+    delivered: list[str] = []
+    for hook in hooks:
+        target = session.get(Character, hook.target_character_id)
+        sender_id = (hook.payload or {}).get("sender_character_id")
+        sender = session.get(Character, sender_id) if sender_id else None
+        message = str((hook.payload or {}).get("message") or "").strip()
+        if target is None or sender is None or not sender.is_npc or not message:
+            hook.status = "EXPIRED"
+            session.add(hook)
+            continue
+        try:
+            send_npc_initiative(session, sender, target, message)
+            hook.status = "CONSUMED"
+            session.add(hook)
+            delivered.append(f"{sender.name} mandou uma mensagem")
+        except Exception:
+            logger.exception("future hook %s failed", hook.id)
+    if hooks:
+        session.commit()
+    return delivered
 
 def run_catchup(session: Session, *, with_social: bool = True, minutes: int | None = None) -> dict:
     from app.database.seed_world import advance_world_time_session
@@ -49,6 +82,7 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
     check_open_events(session, until_dt)
     stale_sessions = recover_stale_event_sessions(session)
     idle_sessions = idle_conversation_sessions(session)
+    future_social = process_due_future_hooks(session)
 
     social: list[str] = []
     if with_social:
@@ -83,6 +117,8 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
         summary_parts.append(f"{stale_sessions} sessão(ões) de evento antiga(s) arquivada(s) pelo tempo")
     if idle_sessions:
         summary_parts.append(f"{idle_sessions} conversa(s) ficaram ociosas")
+    if future_social:
+        summary_parts.append(f"{len(future_social)} novidade(s) social(is) chegaram enquanto você estava fora")
     if social:
         summary_parts.append(", ".join(social))
     summary = "; ".join(summary_parts) or "O tempo passou sem grandes novidades."
@@ -93,7 +129,7 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
             summary=summary[:2000],
             payload={
                 "payments": economy["payments"][:20],
-                "social": social,
+                "social": social + future_social,
                 "elapsed_minutes": elapsed,
             },
         )
