@@ -96,6 +96,19 @@ def update_social_arcs(session: Session, moment: datetime) -> tuple[int, list[st
             continue
         _record_arc(session, left, right, arc, moment, transition_from=previous)
         _record_arc(session, right, left, arc, moment, transition_from=previous)
+        if left.user_id is not None:
+            session.add(Notification(
+                character_id=left.id,
+                type="RELATIONSHIP_CHANGE",
+                payload={"other_id": right.id, "other_name": right.name, "arc": arc, "from": previous},
+            ))
+        if right.user_id is not None:
+            session.add(Notification(
+                character_id=right.id,
+                type="RELATIONSHIP_CHANGE",
+                payload={"other_id": left.id, "other_name": left.name, "arc": arc, "from": previous},
+            ))
+        session.commit()
         transitions += 1
         if previous is None:
             highlights.append(f"{left.name} e {right.name} começaram a se aproximar ({arc.replace('_', ' ')})")
