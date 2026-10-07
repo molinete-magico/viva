@@ -174,6 +174,11 @@ def follow_character(session: Session, follower: Character, target_id: int) -> t
     if created:
         session.add(Follow(follower_character_id=follower.id, followed_character_id=target.id))
         session.commit()
+        rel.apply_changes(
+            session, follower.id, target.id,
+            {"familiarity": 1, "respect": 1},
+            log=False,
+        )
         _bump_discovery(session, target, 3)
         if not target.is_npc:
             _notify(
@@ -215,6 +220,20 @@ def unfollow_character(session: Session, follower: Character, target_id: int) ->
     if existing is not None:
         session.delete(existing)
         session.commit()
+        rel.apply_changes(
+            session, follower.id, target.id,
+            {"tension": 1},
+            log=False,
+        )
+        rel.add_memory(
+            session,
+            owner_character_id=follower.id,
+            other_character_id=target.id,
+            content=f"Deixei de acompanhar {target.name}.",
+            kind="social_graph_change",
+            importance=16,
+            dedupe_key=f"unfollow-{follower.id}-{target.id}-{__import__('datetime').datetime.now().date().isoformat()}",
+        )
 
 
 def ensure_unliked(session: Session, actor: Character, target_type: str, target_id: int) -> bool:
