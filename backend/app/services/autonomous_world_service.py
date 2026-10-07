@@ -419,14 +419,21 @@ def city_pulse(session: Session, moment: datetime) -> dict:
             density[character.current_location_id] = density.get(character.current_location_id, 0) + 1
     hot_locations = sorted(density.items(), key=lambda item: item[1], reverse=True)[:5]
     total_people = sum(density.values())
-    activity_count = len(posts) + len(events)\n    if activity_count >= 12: social_weather = "A cidade está especialmente agitada."\n    elif activity_count >= 7: social_weather = "Há bastante movimento social acontecendo."\n    elif total_people >= 10: social_weather = "A cidade está agitada."
+    activity_count = len(posts) + len(events)
+    if activity_count >= 12:
+        social_weather = "A cidade está especialmente agitada."
+    elif activity_count >= 7:
+        social_weather = "Há bastante movimento social acontecendo."
+    elif total_people >= 10:
+        social_weather = "A cidade está agitada."
     elif total_people >= 5: social_weather = "Há bastante movimento pela cidade."
     elif total_people >= 2: social_weather = "A cidade está em um ritmo tranquilo."
     else: social_weather = "A cidade está especialmente quieta."
     return {
         "generated_at": moment.isoformat(),
         "social_weather": social_weather,
-        "resident_count": total_people,\n        "activity_count": activity_count,
+        "resident_count": total_people,
+        "activity_count": activity_count,
         "recent_posts": [
             {
                 "id": post.id,
