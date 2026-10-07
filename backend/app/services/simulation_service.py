@@ -91,6 +91,7 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
         from app.services.autonomy_service import simulate_social_life
         from app.services.social_arc_service import update_social_arcs, advance_character_goals, propagate_rumors, advance_social_intentions
         from app.services.autonomous_world_service import run_social_dynamics
+        from app.services.city_life_service import run_city_life
         from app.services.social_service import npc_social_reactions
 
         try:
@@ -119,6 +120,7 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
             if rumors_spread:
                 social.append(f"{rumors_spread} rumor(es) circularam pela cidade")
             dynamics = run_social_dynamics(session, until_dt)
+            city_life = run_city_life(session, until_dt)
             if dynamics["graph_changes"]:
                 social.append(f"{dynamics['graph_changes']} mudança(s) no grafo social")
             if dynamics["events_resolved"]:
@@ -127,7 +129,10 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
                 social.append(f"{dynamics['rumors']} pessoa(s) ouviram rumores")
             if dynamics["reputation_updates"]:
                 social.append(f"{dynamics['reputation_updates']} perfil(is) ganharam visibilidade")
-            social.extend((arc_highlights + intent_highlights + goal_highlights + rumor_highlights + dynamics["highlights"])[:12])
+            city_counts = sum(value for key, value in city_life.items() if key not in {"highlights"} and isinstance(value, int))
+            if city_counts:
+                social.append(f"{city_counts} pequenas mudanças aconteceram na vida cotidiana")
+            social.extend((arc_highlights + intent_highlights + goal_highlights + rumor_highlights + dynamics["highlights"] + city_life["highlights"])[:18])
 
             # A atividade do jogador também entra no ecossistema: NPCs que o seguem
             # podem reagir, mas isso não é a única fonte de vida do feed.
