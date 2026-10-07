@@ -352,7 +352,11 @@ def simulate_social_life(session: Session, from_dt: datetime, until_dt: datetime
     from app.services.llm_service import generate_npc_comment, generate_npc_post
 
     while cursor <= until_dt:
-        locations += update_npc_locations(session, cursor)\n        if _daily_activity(session, cursor):\n            activities += 1\n        if cursor.hour in (18, 21) and cursor.minute < 90:\n            proactive_dms += _proactive_player_contact(session, cursor)
+        locations += update_npc_locations(session, cursor)
+        if _daily_activity(session, cursor):
+            activities += 1
+        if cursor.hour in (18, 21) and cursor.minute < 90:
+            proactive_dms += _proactive_player_contact(session, cursor)
         groups = _nearby_groups(session)
 
         for location_id, occupants in groups.items():
