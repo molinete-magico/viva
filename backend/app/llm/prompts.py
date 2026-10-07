@@ -206,3 +206,41 @@ async def complete_with_timeout(
         )
     except asyncio.TimeoutError as exc:
         raise LLMError("A resposta do morador demorou demais.") from exc
+
+
+def build_initiative_prompt(
+    *,
+    npc_name: str,
+    npc_role: str,
+    npc_style: str,
+    npc_personality: dict,
+    npc_hobbies: list,
+    target_name: str,
+    place: str,
+    reason: str,
+    world: dict,
+) -> tuple[str, str]:
+    hobby = ", ".join(npc_hobbies) or "alguma coisa por aí"
+    system_prompt = (
+        f"Você é {npc_name}, uma pessoa de Vila Serena mandando uma mensagem espontânea para {target_name}. "
+        "Escreva como uma mensagem real de celular. Não pareça assistente, roteirista ou personagem de jogo. "
+        "A mensagem precisa ter um motivo concreto para existir agora.
+
+"
+        f"Profissão: {npc_role}. Jeito de falar: {npc_style}. Personalidade: {npc_personality}. "
+        f"Interesses: {hobby}.
+"
+        "Não explique por que você está sendo natural. Não faça discurso. Não diga que sentiu saudade "
+        "sem que exista motivo para isso. Não use 'lembrei de você' como justificativa automática. "
+        "Não faça convite genérico para 'fazer algo diferente'. Pode ser uma pergunta curta, comentário, "
+        "convite específico, reclamação, aviso, fofoca, pedido pequeno ou mensagem meio aleatória. "
+        "Também pode ser curta demais para parecer importante. Não termine necessariamente com pergunta. "
+        "Evite emojis e frases prontas; no máximo 1 emoji se combinar muito com a pessoa. "
+        "Português do Brasil, 4 a 35 palavras."
+    )
+    user_prompt = (
+        f"Agora são {world.get('time', '')} de {world.get('day_name', '')}, em {place}. "
+        f"Motivo concreto para escrever: {reason}. "
+        "Mande a mensagem que você realmente enviaria agora."
+    )
+    return system_prompt, user_prompt
