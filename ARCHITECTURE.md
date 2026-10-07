@@ -647,3 +647,11 @@ Esses limites existem para evitar spam e custo excessivo de LLM, não para torna
 `autonomous_world_service.py` complementa `autonomy_service.py` com manutenção do grafo social, arrefecimento de tensão, resolução de eventos ambientais, reações NPC, propagação de rumores, reputação e o resumo `city_pulse`. `social_arc_service.py` transforma arcos em DMs e encontros concretos. `feed_service.py` oferece o escopo `for_you`/`popular`, ponderando recência, engajamento, follows e relação com o leitor.
 
 A camada continua sem nova tabela: memórias são usadas como marcadores de deduplicação e histórico. O backend determina consequências; o LLM não recebe autoridade sobre estado.
+
+## V5 — Dinâmica cotidiana e segunda ordem
+
+A camada de vida cotidiana (city_life_service.py) transforma presença, rotina, afinidade e reputação em pequenas consequências persistentes. O feed passou a usar pontuação personalizada com carregamento agregado de engajamento e relações, reduzindo consultas repetidas por post.
+
+O City Pulse agora expõe clima social, quantidade aproximada de moradores em movimento e locais mais movimentados. A página do mundo apresenta esses sinais junto do resumo "Enquanto você estava fora".
+
+Nenhuma tabela nova é necessária: memória, relação, follow, evento, post e notificação continuam sendo as primitivas de persistência.
