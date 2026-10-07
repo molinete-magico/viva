@@ -1,0 +1,196 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { api } from '../../services/api'
+import { EmptyState, ErrorState, Spinner, useFetch, WarningBanner } from '../../components/ui'
+import type { EventItem, Listing, Location } from '../../types/api'
+import { formatEventTime } from '../../utils/format'
+
+const STATUS_LABELS: Record<string, string> = {
+  SCHEDULED: 'Marcado',
+  OPEN: 'Aberto',
+  ACTIVE: 'Acontecendo agora',
+  COMPLETED: 'Encerrado',
+  CANCELLED: 'Cancelado',
+}
+
+const PARTICIPANT_LABELS: Record<string, string> = {
+  INVITED: 'convidado(a)',
+  ACCEPTED: 'confirmado(a)',
+  JOINED: 'participando',
+  DECLINED: 'recusou',
+  WITHDREW: 'saiu',
+}
+
+const emptyForm = {
+  title: '',
+  description: '',
+  location_id: 0,
+  scheduled_at: '',
+  invitees: '',
+}
+
+export function EventsPage() {
+  const [form, setForm] = useState(emptyForm)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
+  const [onlyMine, setOnlyMine] = useState(false)
+  const events = useFetch<Listing<EventItem>>(onlyMine ? '/events?mine=true' : '/events', [onlyMine])
+  const locations = useFetch<Listing<Location>>('/world/locations')
+
+  async function createEvent() {
+    setSaving(true)
+    setError('')
+    try {
+      if (!form.title.trim()) throw new Error('Dê um título ao evento.')
+      if (!form.location_id) throw new Error('Escolha onde vai rolar.')
+      if (!form.scheduled_at) throw new Error('Falta marcar data e hora.')
+      const invitees = form.invitees
+        .split(',')
+        .map((v) => Number(v.trim()))
+        .filter((v) => Number.isFinite(v) && v > 0)
+      await api<EventItem>('/events', {
+        method: 'POST',
+        body: {
+          title: form.title,
+          description: form.description,
+          location_id: form.location_id,
+          scheduled_at: new Date(form.scheduled_at).toISOString(),
+          invitees,
+        },
+      })
+      setForm(emptyForm)
+      setShowCreate(false)
+      events.reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não deu para criar o evento.')
+      setSaving(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-5">
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="font-display text-xl font-semibold text-ink">Eventos</h1>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setOnlyMine((v) => !v)}
+            className={`tap rounded-full px-3 py-1.5 text-xs font-medium transition ${
+              onlyMine ? 'bg-accent-soft text-accent-deep' : 'bg-surface text-ink-soft'
+            }`}
+          >
+            Meus
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowCreate((v) => !v)}
+            className="tap rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+          >
+            {showCreate ? 'Fechar' : 'Criar'}
+          </button>
+        </div>
+      </div>
+
+      {error && <div className="mt-3"><WarningBanner message={error} onClose={() => setError('')} /></div>}
+
+      {showCreate && (
+        <form
+          className="mt-4 space-y-3 rounded-2xl border border-line bg-surface p-4"
+          onSubmit={(e) => {
+            e.preventDefault()
+            createEvent()
+          }}
+        >
+          <h2 className="text-sm font-semibold text-ink">Marcar algo na cidade</h2>
+          <input
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder="Título do evento"
+            className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+          />
+          <textarea
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            placeholder="Do que se trata (opcional)"
+            rows={2}
+            className="w-full resize-none rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <select
+              value={form.location_id}
+              onChange={(e) => setForm({ ...form, location_id: Number(e.target.value) })}
+              className="rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+            >
+              <option value={0}>Onde?</option>
+              {(locations.data?.items ?? []).map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.name}
+                </option>
+              ))}
+            </select>
+            <input
+              type="datetime-local"
+              value={form.scheduled_at}
+              onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })}
+              className="rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+            />
+          </div>
+          <input
+            value={form.invitees}
+            onChange={(e) => setForm({ ...form, invitees: e.target.value })}
+            placeholder="Convidar por código de personagem (ex.: 2, 4) — opcional"
+            className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+          />
+          <button
+            type="submit"
+            disabled={saving}
+            className="tap w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
+          >
+            {saving ? 'Marcando...' : 'Marcar evento'}
+          </button>
+        </form>
+      )}
+
+      {events.loading ? (
+        <Spinner label="Consultando a agenda" />
+      ) : events.error ? (
+        <ErrorState message={events.error} onRetry={events.reload} />
+      ) : (events.data?.items.length ?? 0) === 0 ? (
+        <EmptyState title="Nada marcado ainda." hint="Convites e festas aparecem aqui assim que surgirem." />
+      ) : (
+        <ul className="mt-4 space-y-3">
+          {events.data?.items.map((event) => (
+            <li key={event.id}>
+              <Link
+                to={`/events/${event.id}`}
+                className="block rounded-2xl border border-line bg-surface p-4 transition hover:border-accent/40"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="text-base font-semibold text-ink">{event.title}</h2>
+                  <span className="shrink-0 rounded-full bg-sea-soft px-2.5 py-1 text-[11px] font-medium text-sea">
+                    {STATUS_LABELS[event.status] ?? event.status}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-ink-soft">
+                  {formatEventTime(event.scheduled_at)}
+                  {event.location_name ? ` · ${event.location_name}` : ''}
+                </p>
+                {event.description && (
+                  <p className="mt-2 text-sm leading-relaxed text-ink-soft">{event.description}</p>
+                )}
+                <p className="mt-2 text-xs text-ink-faint">
+                  {event.participant_count} {event.participant_count === 1 ? 'participante' : 'participantes'}
+                  {event.host_name ? ` · por ${event.host_name}` : ''}
+                  {event.my_status ? ` · ${PARTICIPANT_LABELS[event.my_status] ?? event.my_status}` : ''}
+                </p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}

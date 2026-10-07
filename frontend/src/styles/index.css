@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #faf6f0;
+  --color-surface: #ffffff;
+  --color-ink: #22201d;
+  --color-ink-soft: #736c62;
+  --color-ink-faint: #a49c90;
+  --color-line: #e9e2d7;
+  --color-accent: #e2603b;
+  --color-accent-deep: #c44a29;
+  --color-accent-soft: #fbe9e2;
+  --color-sea: #14746f;
+  --color-sea-soft: #e2f1ef;
+  --color-warn: #b45309;
+  --color-warn-soft: #fdf3e3;
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  a {
+    touch-action: manipulation;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+@utility safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
+}
+
+@utility safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+@utility tap {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+.auth-input {
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  padding: 0.7rem 0.9rem;
+  font-size: 0.95rem;
+  color: var(--color-ink);
+  transition: border-color 0.15s ease;
+}
+
+.auth-input::placeholder {
+  color: var(--color-ink-faint);
+}
+
+.auth-input:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}

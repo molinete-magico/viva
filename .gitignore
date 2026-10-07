@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Banco e segredos
+data/
+*.db
+backend/.env
+
+# Node
+node_modules/
+dist/
+dev-dist/
+*.local
+
+# Playwright
+test-results/
+playwright-report/
+
+# Editor/OS
+.DS_Store
+.idea/
+.vscode/
+*.log

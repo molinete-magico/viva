@@ -1,0 +1,90 @@
+from sqlmodel import Session, select
+
+from app.domain.errors import ServiceError
+from app.models import Character, CharacterPhoto, Follow, Post, User
+from app.schemas.character import CharacterStats, CreateCharacterRequest
+from app.schemas.social import FeedResponse
+
+
+def create_own(session: Session, user: User, req: CreateCharacterRequest) -> Character:
+    if user.active_character_id is not None and session.get(Character, user.active_character_id) is not None:
+        raise ServiceError("Você já tem um personagem na cidade.", 409)
+    character = Character(
+        user_id=user.id,
+        name=req.name.strip(),
+        age=req.age,
+        pronouns=req.pronouns.strip(),
+        bio=req.bio.strip(),
+        profession_label=req.profession_label.strip(),
+        is_npc=False,
+        money=300,
+        discovered_level=3,
+    )
+    session.add(character)
+    session.commit()
+    session.refresh(character)
+    user.active_character_id = character.id
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return character
+
+
+def get_active_character(session: Session, user: User) -> Character | None:
+    if user.active_character_id is None:
+        return None
+    return session.get(Character, user.active_character_id)
+
+
+def require_active_character(session: Session, user: User) -> Character:
+    character = get_active_character(session, user)
+    if character is None:
+        raise ServiceError("Crie seu personagem para continuar.", 403)
+    return character
+
+
+def stats_for(session: Session, character_id: int) -> CharacterStats:
+    posts = session.exec(select(Post).where(Post.author_character_id == character_id)).all()
+    followers = session.exec(select(Follow).where(Follow.followed_character_id == character_id)).all()
+    following = session.exec(select(Follow).where(Follow.follower_character_id == character_id)).all()
+    return CharacterStats(posts=len(posts), followers=len(followers), following=len(following))
+
+
+def list_characters(session: Session) -> list[Character]:
+    return session.exec(select(Character).order_by(Character.id).limit(200)).all()
+
+
+def get_character(session: Session, character_id: int) -> Character:
+    character = session.get(Character, character_id)
+    if character is None:
+        raise ServiceError("Personagem não encontrado.", 404)
+    return character
+
+
+def posts_by_character(session: Session, character_id: int, limit: int = 20) -> FeedResponse:
+    from app.services.feed_service import serialize_posts
+
+    posts = session.exec(
+        select(Post).where(Post.author_character_id == character_id).order_by(Post.id.desc()).limit(limit)
+    ).all()
+    return serialize_posts(session, posts, viewer=None)
+
+
+def photo_url_map(session: Session, characters: list[Character]) -> dict[int, str]:
+    photo_ids = [c.photo_id for c in characters if c.photo_id is not None]
+    if not photo_ids:
+        return {}
+    photos = session.exec(select(CharacterPhoto).where(CharacterPhoto.id.in_(photo_ids))).all()
+    return {photo.character_id: photo.path for photo in photos}
+
+
+def can_view_bio(character: Character, is_me: bool) -> bool:
+    if is_me or not character.is_npc:
+        return True
+    return character.discovered_level >= 2
+
+
+def can_view_details(character: Character, is_me: bool) -> bool:
+    if is_me or not character.is_npc:
+        return True
+    return character.discovered_level >= 3
