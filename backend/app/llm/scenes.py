@@ -65,10 +65,12 @@ def build_scene_prompt(
     chronology: str,
     narrative_so_far: list[str],
     last_action: str | None,
+    free_text_action: str | None = None,
 ) -> tuple[str, str]:
     who = ", ".join(p for p in participants if p and p != player_name) or "os presentes"
     history = "\n".join(narrative_so_far[-8:]) or "A cena acabou de começar."
     action_text = last_action or "(ainda não agiu)"
+    free_text_text = free_text_action or "(nenhuma ação livre)"
     system_prompt = (
         "Você é o narrador de uma cena interativa de RPG de cidade pequena brasileira, ambientada "
         f"na Vila Serena. A cena é \"{event_title}\".\n"
@@ -77,6 +79,9 @@ def build_scene_prompt(
         "Regras: narrative em português do Brasil, 2 a 4 frases, avançando a cena com o impacto da "
         f"última ação do jogador ({action_text}); dialogue 1 a 3 falas dos participantes "
         f"({who}, com {host_name} entre eles) no tom deles e coerentes com as versões anteriores; "
+        "As opções são sugestões, não limites da imaginação do jogador. O jogador também pode "
+        "descrever qualquer ação livre em texto; trate essa intenção como a ação real da cena e "
+        "faça os personagens reagirem a ela. Não invente capacidades impossíveis. "
         "actions com 3 a 5 opções, id curto em snake_case, label em PT-BR, e effects podendo conter "
         '"money" (variação em R$), uma relação ("bosst/menos" nos campos familiarity, friendship, trust, '
         'romance, respect, tension) e/ou "memory" (memória que o jogador guarda).'
@@ -101,6 +106,7 @@ async def generate_scene(
     chronology: str,
     narrative_so_far: list[str],
     last_action: str | None = None,
+    free_text_action: str | None = None,
     turn_index: int = 0,
 ) -> dict[str, Any]:
     system_prompt, user_prompt = build_scene_prompt(
@@ -112,6 +118,7 @@ async def generate_scene(
         chronology=chronology,
         narrative_so_far=narrative_so_far,
         last_action=last_action,
+        free_text_action=free_text_action,
     )
     try:
         text = await complete_with_timeout(
