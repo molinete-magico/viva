@@ -265,7 +265,7 @@ def perform_action(
     session: Session = Depends(get_session),
 ):
     character = character_service.require_active_character(session, user)
-    turn = event_service.perform_action(session, character, session_id, req.action_id)
+    turn = event_service.perform_action(session, character, session_id, req.action_id, req.free_text)
     return _turn_out(turn)
 
 
