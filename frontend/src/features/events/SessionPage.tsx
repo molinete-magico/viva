@@ -9,6 +9,7 @@ export function SessionPage() {
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [freeText, setFreeText] = useState('')
   const session = useFetch<SessionState>(`/events/sessions/${sessionId}`, [sessionId])
   const [outcome, setOutcome] = useState<Outcome | null>(null)
 
@@ -29,6 +30,25 @@ export function SessionPage() {
       session.reload()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Essa ação não entrou.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function actFreely() {
+    const intent = freeText.trim()
+    if (!intent || busy) return
+    setBusy(true)
+    setError('')
+    try {
+      await api(`/events/sessions/${sessionId}/actions`, {
+        method: 'POST',
+        body: { free_text: intent },
+      })
+      setFreeText('')
+      session.reload()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não deu para continuar essa ação.')
     } finally {
       setBusy(false)
     }
@@ -119,6 +139,36 @@ export function SessionPage() {
               </button>
             ))}
           </div>
+
+          <form
+            className="mt-4 border-t border-line pt-4"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void actFreely()
+            }}
+          >
+            <label htmlFor="free-event-action" className="text-xs font-semibold text-ink">
+              Ou faça qualquer outra coisa
+            </label>
+            <textarea
+              id="free-event-action"
+              value={freeText}
+              onChange={(event) => setFreeText(event.target.value)}
+              maxLength={1000}
+              rows={2}
+              placeholder="Ex.: chamo a Aiko para conversar em particular e pergunto se ela está bem."
+              className="mt-2 min-h-20 w-full resize-y rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
+              disabled={busy}
+            />
+            <button
+              type="submit"
+              disabled={busy || !freeText.trim()}
+              className="tap mt-2 w-full rounded-xl border border-accent/40 bg-accent-soft px-4 py-2.5 text-sm font-semibold text-accent-deep disabled:opacity-40"
+            >
+              Fazer isso
+            </button>
+          </form>
+
           <div className="mt-3 flex gap-2">
             <button
               type="button"
