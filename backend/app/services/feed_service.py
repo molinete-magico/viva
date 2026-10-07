@@ -71,14 +71,42 @@ def list_feed(
     from app.models import Follow
 
     query = select(Post).order_by(Post.id.desc())
-    if viewer is not None and scope == "following":
+    followed: list[int] = []
+    if viewer is not None:
         followed = session.exec(
             select(Follow.followed_character_id).where(Follow.follower_character_id == viewer.id)
         ).all()
+    if viewer is not None and scope == "following":
         query = query.where(or_(Post.author_character_id == viewer.id, Post.author_character_id.in_(list(followed))))
     if cursor is not None:
         query = query.where(Post.id < cursor)
-    posts = session.exec(query.limit(limit + 1)).all()
+
+    if viewer is not None and scope in ("for_you", "popular"):
+        # Descoberta usa uma janela curta para não quebrar paginação histórica.
+        candidates = session.exec(query.limit(100).all()).all()
+        from datetime import datetime, timezone
+        from app.models import Comment, Relationship
+        now = datetime.now(timezone.utc)
+        def relevance(post: Post) -> float:
+            age_hours = max(0.25, (now - post.created_at).total_seconds() / 3600)
+            likes = len(session.exec(select(Like.id).where(Like.target_type == "post", Like.target_id == post.id)).all())
+            comments = len(session.exec(select(Comment.id).where(Comment.post_id == post.id)).all())
+            score = likes * 2.0 + comments * 3.0
+            if post.author_character_id in followed:
+                score += 5.0
+            relationship = session.exec(
+                select(Relationship).where(
+                    ((Relationship.character_a_id == viewer.id) & (Relationship.character_b_id == post.author_character_id))
+                    | ((Relationship.character_a_id == post.author_character_id) & (Relationship.character_b_id == viewer.id))
+                )
+            ).first()
+            if relationship:
+                score += relationship.friendship * 0.08 + relationship.familiarity * 0.03 - relationship.tension * 0.05
+            score += 8.0 / age_hours
+            return score
+        posts = sorted(candidates, key=relevance, reverse=True)[:limit + 1]
+    else:
+        posts = session.exec(query.limit(limit + 1)).all()
     next_cursor = None
     if len(posts) > limit:
         posts = posts[:limit]
