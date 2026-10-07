@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 @theme {
-  --color-paper: #faf6f0;
+  --color-paper: #f7f4ef;
   --color-surface: #ffffff;
-  --color-ink: #22201d;
-  --color-ink-soft: #736c62;
-  --color-ink-faint: #a49c90;
-  --color-line: #e9e2d7;
+  --color-ink: #201e1b;
+  --color-ink-soft: #716a61;
+  --color-ink-faint: #a39b91;
+  --color-line: #e5ded3;
   --color-accent: #e2603b;
   --color-accent-deep: #c44a29;
   --color-accent-soft: #fbe9e2;
@@ -17,58 +17,96 @@
   --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
 }
 
+:root {
+  color-scheme: light;
+  --viva-paper: #f7f4ef;
+  --viva-surface: #ffffff;
+  --viva-ink: #201e1b;
+  --viva-ink-soft: #716a61;
+  --viva-ink-faint: #a39b91;
+  --viva-line: #e5ded3;
+  --viva-accent: #e2603b;
+  --viva-accent-deep: #c44a29;
+  --viva-accent-soft: #fbe9e2;
+  --viva-shadow: 0 10px 35px rgba(50, 39, 28, 0.06);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --viva-paper: #11100f;
+  --viva-surface: #181716;
+  --viva-ink: #f1eee8;
+  --viva-ink-soft: #aaa39a;
+  --viva-ink-faint: #77716a;
+  --viva-line: #302d29;
+  --viva-accent: #f07855;
+  --viva-accent-deep: #ff9272;
+  --viva-accent-soft: #34201a;
+  --viva-shadow: 0 14px 40px rgba(0, 0, 0, 0.22);
+
+  --color-paper: #11100f;
+  --color-surface: #181716;
+  --color-ink: #f1eee8;
+  --color-ink-soft: #aaa39a;
+  --color-ink-faint: #77716a;
+  --color-line: #302d29;
+  --color-accent: #f07855;
+  --color-accent-deep: #ff9272;
+  --color-accent-soft: #34201a;
+  --color-sea-soft: #172c2b;
+  --color-warn-soft: #302515;
+}
+
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    background: var(--viva-paper);
   }
 
   body {
-    background-color: var(--color-paper);
-    color: var(--color-ink);
+    min-width: 320px;
+    background: var(--viva-paper);
+    color: var(--viva-ink);
     font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     text-rendering: optimizeLegibility;
+    transition: background-color 180ms ease, color 180ms ease;
   }
 
-  button,
-  a {
-    touch-action: manipulation;
+  ::selection {
+    background: var(--viva-accent-soft);
+    color: var(--viva-ink);
   }
+
+  button, a { touch-action: manipulation; }
 
   :focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--viva-accent);
     outline-offset: 2px;
   }
 }
 
-@utility safe-bottom {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
-}
-
-@utility safe-top {
-  padding-top: env(safe-area-inset-top, 0px);
-}
-
-@utility tap {
-  min-height: 2.75rem;
-  min-width: 2.75rem;
-}
+@utility safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem); }
+@utility safe-top { padding-top: env(safe-area-inset-top, 0px); }
+@utility tap { min-height: 2.75rem; min-width: 2.75rem; }
 
 .auth-input {
-  width: 100%;
-  border-radius: 0.9rem;
-  border: 1px solid var(--color-line);
-  background: var(--color-surface);
-  padding: 0.7rem 0.9rem;
-  font-size: 0.95rem;
-  color: var(--color-ink);
-  transition: border-color 0.15s ease;
+  width: 100%; border-radius: 0.9rem; border: 1px solid var(--viva-line);
+  background: var(--viva-surface); padding: 0.7rem 0.9rem; font-size: 0.95rem;
+  color: var(--viva-ink); transition: border-color 150ms ease, box-shadow 150ms ease, background-color 180ms ease;
 }
+.auth-input::placeholder { color: var(--viva-ink-faint); }
+.auth-input:focus { border-color: var(--viva-accent); box-shadow: 0 0 0 3px var(--viva-accent-soft); outline: none; }
 
-.auth-input::placeholder {
-  color: var(--color-ink-faint);
-}
+/* Shared surfaces: keeps the UI calm and readable in both themes. */
+.bg-paper { background-color: var(--viva-paper) !important; }
+.bg-surface { background-color: var(--viva-surface) !important; }
+.text-ink { color: var(--viva-ink) !important; }
+.text-ink-soft { color: var(--viva-ink-soft) !important; }
+.text-ink-faint { color: var(--viva-ink-faint) !important; }
+.border-line { border-color: var(--viva-line) !important; }
+.bg-line\\/60 { background-color: color-mix(in srgb, var(--viva-line) 60%, transparent) !important; }
+.shadow-viva { box-shadow: var(--viva-shadow); }
 
-.auth-input:focus {
-  border-color: var(--color-accent);
-  outline: none;
+@media (prefers-reduced-motion: no-preference) {
+  a, button, textarea, input { transition-property: color, background-color, border-color, box-shadow, opacity, transform; transition-duration: 160ms; }
 }
