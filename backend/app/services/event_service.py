@@ -397,6 +397,19 @@ def perform_action(
         player_action_label=effective_label,
         scene=scene,
     )
+
+    # O narrador pode declarar que a situação chegou naturalmente ao fim.
+    # Isso não concede autoridade sobre efeitos: end_session continua sendo
+    # o único caminho que materializa memória, milestone, outcome e future hooks.
+    flags = scene.get("_flags") if isinstance(scene.get("_flags"), dict) else {}
+    natural_end = bool(
+        flags.get("complete")
+        or flags.get("event_complete")
+        or flags.get("session_complete")
+    )
+    if natural_end and event_session.status == de.SESSION_ACTIVE:
+        end_session(session, character, session_id)
+
     return new_turn
 
 
@@ -446,7 +459,27 @@ def end_session(session: Session, character: Character, session_id: int, summary
             source_event_id=event.id,
             dedupe_key=f"event-{event.id}-{character.id}-{npc_id}",
         )
-        memories.append({"character_id": npc_id, "name": other.name, "memory_id": memory.id})
+        # A experiência também pertence à memória do NPC. Isso permite que
+        # encontros futuros reconheçam o passado sem depender de o jogador
+        # voltar a mencionar o evento.
+        npc_memory = rel.add_memory(
+            session,
+            owner_character_id=npc_id,
+            other_character_id=character.id,
+            content=(f"Passei por {event.title} com {character.name}. {summary[:1200]}").strip(),
+            category="EVENT",
+            kind="shared_experience",
+            importance=35,
+            context={"event_id": event.id, "title": event.title},
+            source_event_id=event.id,
+            dedupe_key=f"event-{event.id}-{npc_id}-{character.id}",
+        )
+        memories.append({
+            "character_id": npc_id,
+            "name": other.name,
+            "memory_id": memory.id,
+            "npc_memory_id": npc_memory.id,
+        })
     if not memories:
         memory = rel.add_memory(
             session,

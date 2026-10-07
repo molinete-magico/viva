@@ -1089,3 +1089,22 @@ Um evento pode mudar o feed.
 O feed pode revelar algo ao jogador.
 
 Esse ciclo é o coração de VIVA.
+
+
+## V2.1 — Correções de autonomia já implementadas
+
+- **NPC↔NPC persistente:** durante catch-up, NPCs que ocupam o mesmo local podem interagir sem o jogador. A interação passa pelo RelationshipService e gera memória para os dois lados.
+- **Cooldown social:** um mesmo par não recebe pulsos repetidos em janela curta; a memória usa chave diária para impedir duplicação.
+- **Memória bilateral:** eventos relevantes deixam registro tanto para o personagem do jogador quanto para os NPCs envolvidos. O NPC pode reconhecer posteriormente que aquela experiência aconteceu.
+- **Conclusão narrativa natural:** uma cena pode declarar flags.complete=true. O backend então encerra a sessão pelo mesmo caminho transacional de uma finalização manual, preservando idempotência e efeitos de domínio.
+- **Autoridade do domínio preservada:** flags, narrativa e texto livre nunca aplicam dinheiro, relação, memória ou future hook diretamente; eles apenas orientam a narrativa. A materialização continua nos serviços de domínio.
+
+### Definition of Done adicional
+
+Uma funcionalidade social só é considerada concluída quando:
+1. pode acontecer sem o jogador apertar um botão específico;
+2. deixa estado persistente quando deveria deixar;
+3. pode ser lembrada por mais de uma pessoa quando a experiência é compartilhada;
+4. possui cooldown/idempotência contra repetição artificial;
+5. aparece no retorno/catch-up de forma compreensível;
+6. não depende do LLM para garantir invariantes ou autorização.

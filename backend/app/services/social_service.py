@@ -2,9 +2,10 @@ from sqlmodel import Session, select
 
 from app.domain.errors import ServiceError
 from app.llm import LLMError
-from app.models import Character, Comment, Follow, Like, Notification, Post
+from app.models import Character, Comment, Follow, Like, Location, Notification, Post
 from app.schemas.social import CommentOut, comment_out
 from app.services.character_service import photo_url_map
+from app.services import relationship_service as rel
 
 
 def _target_post(session: Session, post_id: int) -> Post:
@@ -232,6 +233,71 @@ def is_following(session: Session, follower_id: int, target_id: int) -> bool:
         ).first()
         is not None
     )
+
+
+def npc_autonomous_social_pulse(session: Session) -> tuple[int, int]:
+    """Simula encontros NPC↔NPC sem depender do jogador.
+
+    O relógio/rotina determina onde os NPCs estão; este pulso só transforma
+    co-presença em uma interação ocasional. O relacionamento funciona como
+    cooldown persistente: o mesmo par não recebe outro pulso em poucos minutos.
+    Cada encontro deixa uma memória para os dois lados.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    npcs = session.exec(
+        select(Character).where(
+            Character.is_npc.is_(True),
+            Character.current_location_id.is_not(None),
+        )
+    ).all()
+    by_location: dict[int, list[Character]] = {}
+    for npc in npcs:
+        if npc.current_location_id is not None:
+            by_location.setdefault(npc.current_location_id, []).append(npc)
+
+    interactions = 0
+    memories = 0
+    now = datetime.now(timezone.utc)
+
+    for occupants in by_location.values():
+        if len(occupants) < 2:
+            continue
+        occupants = sorted(occupants, key=lambda character: character.id or 0)
+        for left, right in zip(occupants, occupants[1:]):
+            if left.id is None or right.id is None:
+                continue
+            relationship = rel.relationship_between(session, left.id, right.id)
+            if relationship is not None and relationship.last_interaction_at:
+                if relationship.last_interaction_at > now - timedelta(minutes=90):
+                    continue
+
+            rel.bump_interaction(
+                session,
+                left.id,
+                right.id,
+                {"familiarity": 1, "friendship": 1, "respect": 1},
+            )
+            interactions += 1
+
+            location_name = session.get(Location, left.current_location_id)
+            place = location_name.name if location_name else "um lugar da cidade"
+            for owner, other in ((left, right), (right, left)):
+                memory = rel.add_memory(
+                    session,
+                    owner_character_id=owner.id,
+                    other_character_id=other.id,
+                    content=f"Encontrei {other.name} em {place}; trocamos algumas palavras.",
+                    category="NORMAL",
+                    kind="npc_encounter",
+                    importance=25,
+                    context={"location_id": owner.current_location_id},
+                    dedupe_key=f"npc-encounter-{owner.id}-{other.id}-{now.date().isoformat()}",
+                )
+                if memory.id:
+                    memories += 1
+
+    return interactions, memories
 
 
 def npc_social_reactions(session: Session) -> tuple[int, int]:

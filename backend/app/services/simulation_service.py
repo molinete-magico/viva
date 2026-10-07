@@ -90,9 +90,12 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
         # post do dia e reagem aos posts de humanos — idempotente, sem depender
         # do relógio do mundo nem do relógio real.
         from app.services.llm_service import generate_posts_for_active_npcs
-        from app.services.social_service import npc_social_reactions
+        from app.services.social_service import npc_autonomous_social_pulse, npc_social_reactions
 
         try:
+            npc_interactions, npc_memories = npc_autonomous_social_pulse(session)
+            if npc_interactions:
+                social.append(f"{npc_interactions} encontro(s) entre moradores aconteceram sem você")
             generate_posts_for_active_npcs(session, state.current_date.isoformat())
             social.append("moradores com seguidores publicaram posts do dia")
             likes, comments = npc_social_reactions(session)
