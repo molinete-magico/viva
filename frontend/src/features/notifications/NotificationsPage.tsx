@@ -17,6 +17,7 @@ const TYPE_LABELS: Record<string, string> = {
   MILESTONE: 'Marco da história',
   NPC_DM_INITIATIVE: 'Mensagem iniciada por alguém',
   EVENT_RESULT: 'Resultado do evento',
+  CITY_RELEVANCE: 'novidade importante na cidade',
 }
 
 function targetOf(notification: NotificationItem): string {
@@ -34,7 +35,9 @@ function targetOf(notification: NotificationItem): string {
     case 'EVENT_CANCELLED':
       return `/events/${String(notification.payload.event_id)}`
     case 'RELATIONSHIP_CHANGE':
-      return `/profile/${String(notification.payload.character_id)}`
+      return `/profile/${String(notification.payload.other_id ?? notification.payload.character_id)}`
+    case 'CITY_RELEVANCE':
+      return '/world'
     case 'MILESTONE':
       return '/settings/world/relationships'
     default:
