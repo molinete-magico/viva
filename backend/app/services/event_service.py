@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta, timezone
 
 from sqlmodel import Session, select
 
@@ -484,6 +484,16 @@ def end_session(session: Session, character: Character, session_id: int, summary
         npc = session.get(Character, npc_id)
         if npc is None:
             continue
+        world_state = session.get(WorldState, 1)
+        base_world_dt = (
+            datetime.combine(
+                world_state.current_date,
+                time.fromisoformat(world_state.current_time),
+                tzinfo=timezone.utc,
+            )
+            if world_state is not None
+            else utcnow()
+        )
         hook = FutureHook(
             source_type="event",
             source_id=event.id,
@@ -493,7 +503,7 @@ def end_session(session: Session, character: Character, session_id: int, summary
                 "sender_character_id": npc.id,
                 "message": f"Ei. Fiquei pensando em {event.title}. Foi bom você ter ido.",
             },
-            due_at=utcnow() + timedelta(days=1),
+            due_at=base_world_dt + timedelta(days=1),
         )
         session.add(hook)
         session.flush()
