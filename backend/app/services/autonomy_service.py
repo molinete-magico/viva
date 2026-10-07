@@ -14,7 +14,7 @@ from itertools import combinations
 
 from sqlmodel import Session, select
 
-from app.models import Character, Comment, Follow, Like, Location, Memory, Post, Schedule, WorldState
+from app.models import Character, Comment, Event, EventParticipant, Follow, Like, Location, Memory, Post, Schedule, WorldState
 from app.services import relationship_service as rel
 
 
@@ -149,6 +149,130 @@ def _npc_social_graph(session: Session, npcs: list[Character]) -> None:
     session.commit()
 
 
+def _daily_activity(session: Session, moment: datetime) -> bool:
+    """Cria uma atividade pública pequena por dia, com NPCs como autores."""
+    if not (17 <= moment.hour <= 21):
+        return False
+    start = datetime.combine(moment.date(), datetime.min.time(), tzinfo=moment.tzinfo)
+    end = start + timedelta(days=1)
+    existing = session.exec(
+        select(Event).where(
+            Event.kind == "ambient",
+            Event.scheduled_at >= start,
+            Event.scheduled_at < end,
+        )
+    ).first()
+    if existing is not None:
+        return False
+
+    npcs = session.exec(select(Character).where(Character.is_npc.is_(True))).all()
+    candidates = [npc for npc in npcs if npc.current_location_id is not None]
+    if not candidates:
+        return False
+    host = max(
+        candidates,
+        key=lambda npc: float((npc.personality or {}).get("energy", 0.5)),
+    )
+    location = session.get(Location, host.current_location_id)
+    if location is None:
+        return False
+
+    activity = (location.activities or ["um encontro espontâneo"])[0]
+    event = Event(
+        title=f"{activity.capitalize()} no {location.name}",
+        description=f"Uma atividade espontânea organizada por {host.name}. Quem aparecer pode acabar conhecendo gente nova.",
+        location_id=location.id,
+        host_character_id=host.id,
+        created_by="system",
+        scheduled_at=moment,
+        status="OPEN",
+        kind="ambient",
+        max_participants=5,
+    )
+    session.add(event)
+    session.commit()
+    session.refresh(event)
+
+    nearby = [
+        npc for npc in candidates
+        if npc.id != host.id and npc.current_location_id == location.id
+    ][:4]
+    for npc in nearby:
+        session.add(EventParticipant(event_id=event.id, character_id=npc.id, status="JOINED"))
+    session.commit()
+    return True
+
+
+def _proactive_player_contact(session: Session, moment: datetime) -> int:
+    """Um NPC com motivo social pode procurar o jogador sem ser provocado."""
+    players = session.exec(select(Character).where(Character.is_npc.is_(False))).all()
+    if not players:
+        return 0
+    npcs = session.exec(select(Character).where(Character.is_npc.is_(True))).all()
+    sent = 0
+
+    from app.services.messaging_service import send_npc_initiative
+
+    for player in players:
+        candidates: list[tuple[int, Character]] = []
+        for npc in npcs:
+            if npc.id is None or player.id is None:
+                continue
+            relationship = rel.relationship_between(session, npc.id, player.id)
+            score = 0
+            if relationship is not None:
+                score = (
+                    relationship.friendship
+                    + relationship.familiarity
+                    + relationship.trust
+                    + relationship.respect
+                    - relationship.tension
+                )
+            follows = session.exec(
+                select(Follow).where(
+                    Follow.follower_character_id == npc.id,
+                    Follow.followed_character_id == player.id,
+                )
+            ).first()
+            if follows is not None:
+                score += 6
+            if score >= 2:
+                candidates.append((score, npc))
+
+        if not candidates:
+            continue
+        candidates.sort(key=lambda item: (item[0], item[1].id or 0), reverse=True)
+        npc = candidates[0][1]
+        dedupe = f"initiative-{npc.id}-{player.id}-{moment.date().isoformat()}"
+        if session.exec(select(Memory).where(Memory.owner_character_id == npc.id, Memory.dedupe_key == dedupe)).first():
+            continue
+
+        hobby = (npc.hobbies or ["a cidade"])[0]
+        location = session.get(Location, npc.current_location_id) if npc.current_location_id else None
+        place = location.name if location else "por aqui"
+        message = (
+            f"Ei, {player.name}. Estou em {place} agora e lembrei de você. "
+            f"Você ainda curte {hobby}? Tô com vontade de fazer alguma coisa diferente hoje."
+        )
+        try:
+            send_npc_initiative(session, npc, player, message)
+        except Exception:
+            continue
+        rel.add_memory(
+            session,
+            owner_character_id=npc.id,
+            other_character_id=player.id,
+            content=f"Procurei {player.name} por iniciativa própria porque estava pensando em {hobby}.",
+            category="NORMAL",
+            kind="npc_initiative",
+            importance=32,
+            dedupe_key=dedupe,
+            occurred_at=moment,
+        )
+        sent += 1
+    return sent
+
+
 def simulate_social_life(session: Session, from_dt: datetime, until_dt: datetime) -> dict:
     """Avança a vida social em fatias, em vez de gerar um único pulso no retorno."""
     if until_dt <= from_dt:
@@ -157,13 +281,13 @@ def simulate_social_life(session: Session, from_dt: datetime, until_dt: datetime
     npcs = session.exec(select(Character).where(Character.is_npc.is_(True))).all()
     _npc_social_graph(session, npcs)
 
-    interactions = posts = comments = likes = locations = 0
+    interactions = posts = comments = likes = locations = activities = proactive_dms = 0
     cursor = from_dt + timedelta(minutes=30)
 
     from app.services.llm_service import generate_npc_comment, generate_npc_post
 
     while cursor <= until_dt:
-        locations += update_npc_locations(session, cursor)
+        locations += update_npc_locations(session, cursor)\n        if _daily_activity(session, cursor):\n            activities += 1\n        if cursor.hour in (18, 21) and cursor.minute < 90:\n            proactive_dms += _proactive_player_contact(session, cursor)
         groups = _nearby_groups(session)
 
         for location_id, occupants in groups.items():
