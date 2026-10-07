@@ -651,6 +651,94 @@ def location_activity_affinity(session: Session, moment: datetime) -> tuple[int,
     return actions, highlights[:4]
 
 
+def social_group_formation(session: Session, moment: datetime) -> tuple[int, list[str]]:
+    """Três ou mais moradores recorrentes no mesmo local começam a formar um pequeno círculo."""
+    npcs = session.exec(select(Character).where(Character.is_npc.is_(True))).all()
+    by_location: dict[int, list[Character]] = {}
+    for npc in npcs:
+        if npc.current_location_id is not None:
+            by_location.setdefault(npc.current_location_id, []).append(npc)
+    actions, highlights = 0, []
+    for location_id, people in by_location.items():
+        if len(people) < 3:
+            continue
+        people = sorted(people, key=lambda p: _social_personality(p)[0], reverse=True)[:5]
+        for index, left in enumerate(people):
+            for right in people[index + 1:]:
+                if left.id is None or right.id is None:
+                    continue
+                relationship = _relationship(session, left, right)
+                if relationship is None or relationship.friendship < 20:
+                    continue
+                marker = key("social-circle", location_id, left.id, right.id, moment.date())
+                if already(session, left.id, marker) or score(f"circle:{location_id}:{left.id}:{right.id}:{moment.date()}") > 0.28:
+                    continue
+                remember(session, left, right, "Comecei a reconhecer este pequeno círculo de pessoas.", "social_circle", marker, moment, 20)
+                actions += 1
+                highlights.append(f"{left.name} e {right.name} fortaleceram um círculo social")
+                break
+    return actions, highlights[:6]
+
+
+def social_spending(session: Session, moment: datetime) -> tuple[int, list[str]]:
+    """Pequenos gastos em convivência tornam a economia parte da vida social."""
+    npcs = session.exec(select(Character).where(Character.is_npc.is_(True))).all()
+    actions, highlights = 0, []
+    for npc in npcs:
+        if npc.id is None or npc.money is None or npc.money < 8:
+            continue
+        sociability, _ = _social_personality(npc)
+        marker = key("social-spending", npc.id, moment.date())
+        if already(session, npc.id, marker) or sociability < 0.65:
+            continue
+        amount = round(min(npc.money * 0.04, 12.0), 2)
+        if amount < 1 or score(f"spend:{npc.id}:{moment.date()}") > 0.18:
+            continue
+        npc.money = round(npc.money - amount, 2)
+        session.add(npc)
+        remember(session, npc, None, f"Gastei R$ {amount:.2f} em um pequeno momento social.", "social_spending", marker, moment, 15)
+        actions += 1
+        highlights.append(f"{npc.name} teve um pequeno gasto social")
+    if actions:
+        session.commit()
+    return actions, highlights[:6]
+
+
+def memory_consolidation(session: Session, moment: datetime) -> tuple[int, list[str]]:
+    """Memórias repetidas são resumidas em uma lembrança mais importante, sem nova tabela."""
+    npcs = session.exec(select(Character).where(Character.is_npc.is_(True))).all()
+    actions, highlights = 0, []
+    for npc in npcs:
+        if npc.id is None:
+            continue
+        memories = session.exec(
+            select(Memory).where(
+                Memory.owner_character_id == npc.id,
+                Memory.occurred_at >= moment - timedelta(days=7),
+            ).order_by(Memory.occurred_at.desc()).limit(40)
+        ).all()
+        buckets: dict[tuple[str, int | None], list[Memory]] = {}
+        for memory in memories:
+            buckets.setdefault((memory.kind, memory.other_character_id), []).append(memory)
+        for (kind, other_id), bucket in buckets.items():
+            if len(bucket) < 3:
+                continue
+            marker = key("memory-consolidation", npc.id, kind, other_id, moment.date())
+            if already(session, npc.id, marker):
+                continue
+            other = session.get(Character, other_id) if other_id else None
+            subject = other.name if other else "a cidade"
+            remember(
+                session, npc, other,
+                f"Nos últimos dias, acumulei várias experiências envolvendo {subject}.",
+                "memory_consolidation", marker, moment, min(70, 25 + len(bucket) * 6),
+            )
+            actions += 1
+            highlights.append(f"{npc.name} consolidou memórias sobre {subject}")
+            break
+    return actions, highlights[:6]
+
+
 def run_city_life(session: Session, moment: datetime) -> dict:
     result = _run_city_life_base(session, moment)
     extra = [
@@ -662,6 +750,9 @@ def run_city_life(session: Session, moment: datetime) -> dict:
         event_social_echo(session, moment),
         fresh_social_connections(session, moment),
         location_activity_affinity(session, moment),
+        social_group_formation(session, moment),
+        social_spending(session, moment),
+        memory_consolidation(session, moment),
     ]
     result["second_order"] = sum(item[0] for item in extra)
     result["highlights"] = (result["highlights"] + [h for _, hs in extra for h in hs])[:32]
