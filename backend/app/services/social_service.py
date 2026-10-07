@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import hashlib
 
 from sqlmodel import Session, select
 
@@ -371,8 +372,6 @@ def npc_social_reactions(session: Session) -> tuple[int, int]:
             if actor is not None and actor.is_npc:
                 by_author[follow.followed_character_id].append(actor)
 
-    import random
-
     likes_applied = 0
     comments_applied = 0
     for post, _ in rows:
@@ -380,7 +379,8 @@ def npc_social_reactions(session: Session) -> tuple[int, int]:
         if not npc_followers:
             continue
 
-        for actor in random.sample(npc_followers, min(3, len(npc_followers))):
+        ordered_followers = sorted(npc_followers, key=lambda actor: hashlib.sha256(f"reaction:{post.id}:{actor.id}".encode()).hexdigest())
+        for actor in ordered_followers[:3]:
             existing = session.exec(
                 select(Like).where(
                     Like.target_type == "post",
