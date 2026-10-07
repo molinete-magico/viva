@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime, timedelta, timezone
 
-from sqlmodel import Session, select
+from sqlalchemy import func\nfrom sqlmodel import Session, select
 
 from app.models import (
     Character,
@@ -343,16 +343,30 @@ def update_reputation(session: Session, moment: datetime) -> int:
     characters = session.exec(select(Character)).all()
     changed = 0
     cutoff = moment - timedelta(days=7)
+    active_posts = session.exec(select(Post.id, Post.author_character_id).where(Post.created_at >= cutoff)).all()
+    post_ids = [row[0] for row in active_posts if row[0] is not None]
+    author_by_post = {row[0]: row[1] for row in active_posts}
+    like_rows = session.exec(
+        select(Like.target_id, func.count(Like.id))
+        .where(Like.target_type == "post", Like.target_id.in_(post_ids))
+        .group_by(Like.target_id)
+    ).all() if post_ids else []
+    comment_rows = session.exec(
+        select(Comment.post_id, func.count(Comment.id))
+        .where(Comment.post_id.in_(post_ids))
+        .group_by(Comment.post_id)
+    ).all() if post_ids else []
+    likes_by_author: dict[int, int] = {}
+    comments_by_author: dict[int, int] = {}
+    for post_id, count in like_rows:
+        author_id = author_by_post.get(post_id)
+        if author_id is not None: likes_by_author[author_id] = likes_by_author.get(author_id, 0) + int(count)
+    for post_id, count in comment_rows:
+        author_id = author_by_post.get(post_id)
+        if author_id is not None: comments_by_author[author_id] = comments_by_author.get(author_id, 0) + int(count)
     for character in characters:
-        if character.id is None:
-            continue
-        posts = session.exec(select(Post).where(Post.author_character_id == character.id, Post.created_at >= cutoff)).all()
-        if not posts:
-            continue
-        post_ids = [p.id for p in posts]
-        likes = len(session.exec(select(Like).where(Like.target_type == "post", Like.target_id.in_(post_ids))).all()) if post_ids else 0
-        comments = len(session.exec(select(Comment).where(Comment.post_id.in_(post_ids))).all()) if post_ids else 0
-        target = min(10, 1 + (likes // 4) + (comments // 2))
+        if character.id is None: continue
+        target = min(10, 1 + (likes_by_author.get(character.id, 0) // 4) + (comments_by_author.get(character.id, 0) // 2))
         if target > character.discovered_level:
             character.discovered_level = target
             session.add(character)
