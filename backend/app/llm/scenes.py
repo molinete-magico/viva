@@ -72,26 +72,66 @@ def build_scene_prompt(
     action_text = last_action or "(ainda não agiu)"
     free_text_text = free_text_action or "(nenhuma ação livre)"
     system_prompt = (
-        "Você é o narrador de uma cena interativa de RPG de cidade pequena brasileira, ambientada "
-        f"na Vila Serena. A cena é \"{event_title}\".\n"
-        f"Saia APENAS um JSON válido, sem markdown, com estas 4 chaves:\n"
-        '{"narrative": "...", "dialogue": [{"speaker": "...", "line": "..."}], "actions": [{"id": "...", "label": "...", "effects": {"memory": "...", "memory_importance": 20}, "hint": "..."}], "flags": {"complete": false}}\n'
-        "Regras: narrative em português do Brasil, 2 a 4 frases, avançando a cena com o impacto da "
-        f"última ação do jogador ({action_text}); dialogue 1 a 3 falas dos participantes "
-        f"({who}, com {host_name} entre eles) no tom deles e coerentes com as versões anteriores; "
-        "As opções são sugestões, não limites da imaginação do jogador. O jogador também pode "
-        "descrever qualquer ação livre em texto; trate essa intenção como a ação real da cena e "
-        "faça os personagens reagirem a ela. Não invente capacidades impossíveis. "
-        "actions com 3 a 5 opções, id curto em snake_case, label em PT-BR, e flags.complete=true somente quando a situação tiver chegado naturalmente a uma conclusão (despedida, objetivo alcançado, resolução ou encerramento claro); caso contrário, false. effects podendo conter "
-        '"money" (variação em R$), uma relação ("bosst/menos" nos campos familiarity, friendship, trust, '
-        'romance, respect, tension) e/ou "memory" (memória que o jogador guarda).'
+        "Você conduz uma cena interativa que acontece de verdade em Vila Serena. "
+        "Não escreva como livro, filme, narrador épico ou RPG genérico. "
+        "A cena deve parecer uma situação cotidiana com pessoas específicas.
+
+"
+        f"Evento: "{event_title}". Local: {location_name}. Anfitrião: {host_name}. "
+        f"Participantes: {who}.
+
+"
+        "FORMATO — responda APENAS com JSON válido, sem markdown, com estas 4 chaves:
+"
+        '{"narrative": "...", "dialogue": [{"speaker": "...", "line": "..."}], "actions": [{"id": "...", "label": "...", "effects": {"memory": "...", "memory_importance": 20}, "hint": "..."}], "flags": {"complete": false}}
+
+'
+        "NATURALIDADE:
+"
+        "- A narrativa descreve somente o que está acontecendo na cena. Não narre pensamentos, sentimentos ou "
+        "decisões do jogador como se fossem fatos; deixe isso para o jogador.
+"
+        "- Evite frases como 'você percebe que', 'o clima muda', 'todos parecem', 'algo no ar', "
+        "'a cena ganha vida' e outras descrições genéricas quando não houver um detalhe concreto.
+"
+        "- Não faça todos os personagens reagirem ao jogador ao mesmo tempo. Alguns podem estar ocupados, "
+        "distraídos, discordar ou nem responder.
+"
+        "- Cada fala deve ter uma razão para existir. Pessoas não precisam dizer exatamente o que sentem.
+"
+        "- Não faça diálogos excessivamente articulados. Frases incompletas, interrupções e respostas curtas "
+        "são aceitáveis quando combinarem com a pessoa.
+"
+        "- Não transforme uma situação banal em um grande momento. Pequenos acontecimentos também podem ser o resultado.
+"
+        "- Não termine cada rodada com suspense, lição, revelação ou mudança de relacionamento.
+"
+        "- Não trate todas as ações do jogador como boas decisões. Pessoas podem reagir mal, ignorar, discordar "
+        "ou simplesmente seguir a própria rotina.
+
+"
+        f"CONTINUIDADE: a última ação foi: {action_text}. A ação livre, se houver, é: {free_text_text}. "
+        "Use as cenas anteriores para manter continuidade, mas não repita informações apenas para mostrar que lembra.
+
+"
+        "AÇÕES: gere 3 a 5 opções concretas e diferentes entre si. Elas são sugestões, não limites. "
+        "Uma ação pode ser banal, social, inconveniente, impulsiva ou encerrar a participação. "
+        "Não use sempre observar/conversar/ajudar/ir embora com palavras diferentes. "
+        "Os effects representam consequências possíveis e devem ser específicos ao que aconteceu.
+
+"
+        "ENCERRAMENTO: flags.complete=true somente se a situação realmente terminou ou perdeu seu motivo "
+        "para continuar. Não encerre a cena só porque houve uma boa fala ou uma pequena decisão.
+"
+        "Escreva narrative em 2 a 4 frases curtas e dialogue com 1 a 3 falas. Não faça monólogos."
     )
     user_prompt = (
-        f"Contexto: {chronology} no {location_name}.\n"
+        f"Contexto: {chronology}, no {location_name}.\n"
         f"Você é {player_name}. O anfitrião é {host_name}.\n"
         f"Cenas anteriores:\n{history}\n\n"
         f"Ação livre do jogador nesta rodada: {free_text_text}\n"
-        "Gere a próxima cena agora. Se houver ação livre, ela tem prioridade narrativa sobre as opções sugeridas."
+        "Continue a situação a partir do que realmente aconteceu. Se houver ação livre, ela tem prioridade "
+        "sobre as opções sugeridas."
     )
     return system_prompt, user_prompt
 
@@ -164,9 +204,11 @@ async def generate_scene(
     }
 
 OUTCOME_SYSTEM = (
-    "Você é o narrador de uma cidade pequena brasileira chamada Vila Serena. "
-    "Resuma em português do Brasil, em 2 a 4 frases, o que ficou desse encontro "
-    "para o personagem do jogador. Não use aspas. Não mencione o sistema."
+    "Você resume uma experiência que aconteceu de verdade em Vila Serena. "
+    "Escreva como uma pessoa contando depois o que aconteceu, sem narrador épico, "
+    "sem lição de vida e sem linguagem de sistema. Português do Brasil. "
+    "Se houve algo específico ou estranho, prefira esse detalhe a uma conclusão genérica. "
+    "Não invente sentimentos ou consequências que não aparecem no histórico."
 )
 
 
@@ -180,8 +222,11 @@ def build_outcome_prompt(
     who = ", ".join(participant_names) or "os presentes"
     history = "\n".join(narrative_so_far[-10:]) or "A cena acabou de começar."
     user_prompt = (
-        f"Evento: {event_title}. Você é {player_name}. Quem esteve por perto: {who}.\n\n"
-        f"Cenas vividas:\n{history}\n\nResuma o que {player_name} leva dessa experiência."
+        f"Evento: {event_title}. Personagem: {player_name}. Pessoas presentes: {who}.\n\n"
+        f"O que aconteceu:\n{history}\n\n"
+        "Resuma em 1 a 3 frases o que aconteceu de fato. Dê preferência a nomes, ações e detalhes "
+        "concretos. Não use 'foi uma experiência', 'ficou uma lembrança', 'saiu mais próximo' ou "
+        "outras conclusões genéricas se o histórico não sustentar isso."
     )
     return OUTCOME_SYSTEM, user_prompt
 
