@@ -295,6 +295,7 @@ export interface CityPulse {
   generated_at: string
   social_weather: string
   resident_count: number
+  activity_count: number
   hot_locations: CityPulseLocation[]
   recent_posts: CityPulsePost[]
   recent_events: CityPulseEvent[]
