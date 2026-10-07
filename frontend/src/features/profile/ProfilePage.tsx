@@ -69,9 +69,24 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6">
-      <div className="rounded-2xl border border-line bg-surface p-5">
-        <div className="flex items-center gap-4">
+    <div className="mx-auto max-w-3xl px-4 py-6 lg:px-0">
+      <div className="viva-panel overflow-hidden rounded-3xl border border-line bg-surface">
+        <div className="viva-profile-cover viva-grid-noise h-28 sm:h-36" />
+        <div className="relative px-5 pb-5 sm:px-7">
+          <div className="-mt-10 flex items-end justify-between gap-4">
+            <Avatar name={person.name} size="lg" photoUrl={person.photo_url} />
+            {!person.is_me && ownCharacter && <div className="flex gap-2">
+              <button type="button" onClick={toggleFollow} disabled={followBusy} className={`tap rounded-full border px-5 text-sm font-bold transition disabled:opacity-50 ${person.is_following ? 'border-line bg-surface text-ink hover:border-accent/40' : 'border-accent bg-accent text-white hover:bg-accent-deep'}`}>
+                {followBusy ? '…' : person.is_following ? 'Seguindo' : 'Seguir'}
+              </button>
+              {person.is_npc && <button type="button" onClick={startDm} disabled={dmBusy} className="tap rounded-full border border-line bg-surface px-4 text-sm font-bold text-ink transition hover:border-accent/40 disabled:opacity-50" aria-label="Conversar">Mensagem</button>}
+            </div>}
+          </div>
+          <div className="mt-3">
+            <p className="viva-kicker text-accent">{person.is_npc ? 'Morador da cidade' : 'Perfil'}</p>
+            <h1 className="mt-1 font-display text-3xl font-black tracking-tight text-ink">{person.name}</h1>
+            <p className="mt-1 text-sm text-ink-soft">@{person.name.toLowerCase().replace(/\\s+/g, '_')} · {person.profession_label || 'morador'}{person.pronouns ? ` · ${person.pronouns}` : ''}</p>
+          </div>
           <Avatar name={person.name} size="lg" photoUrl={person.photo_url} />
           <div className="min-w-0">
             <h1 className="truncate font-display text-2xl font-semibold text-ink">{person.name}</h1>
@@ -89,8 +104,8 @@ export function ProfilePage() {
 
         {person.bio && <p className="mt-4 text-[15px] leading-relaxed text-ink">{person.bio}</p>}
 
-        <dl className="mt-5 grid grid-cols-3 gap-3 text-center">
-          <div className="rounded-xl bg-paper px-2 py-3">
+        <dl className="mt-5 grid grid-cols-3 border-y border-line py-4 text-left">
+          <div className="px-2 py-1">
             <dt className="text-xs text-ink-soft">Posts</dt>
             <dd className="text-lg font-semibold text-ink">{person.stats.posts}</dd>
           </div>
@@ -136,7 +151,7 @@ export function ProfilePage() {
         </div>
       )}
 
-      {!person.is_me && ownCharacter && (
+      {!person.is_me && ownCharacter && false && (
         <div className="mt-4 space-y-3">
           <button
             type="button"
@@ -170,7 +185,7 @@ export function ProfilePage() {
       )}
 
       <section className="mt-6">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Publicações</h2>
+        <h2 className="viva-kicker text-ink-soft">Publicações</h2>
         {posts.loading ? (
           <Spinner label="Carregando publicações" />
         ) : posts.error ? (
