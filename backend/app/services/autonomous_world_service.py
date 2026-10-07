@@ -261,7 +261,7 @@ def propagate_social_reactions(session: Session, moment: datetime) -> tuple[int,
                         session.add(Notification(character_id=author.id, type="NEW_FOLLOWER", payload={"character_id": npc.id, "name": npc.name, "reason": "interagiu_com_seus_posts"}))
                         session.commit()
                 likes += 1
-            if comments == 0 and _score(f"reply:{post.id}:{npc.id}") > 0.72:
+            if comments < 8 and _score(f"reply:{post.id}:{npc.id}") > 0.72:
                 existing_comment = session.exec(select(Comment).where(Comment.post_id == post.id, Comment.author_character_id == npc.id)).first()
                 if existing_comment is None:
                     text = f"Vi isso e lembrei de {((npc.hobbies or ['uma coisa'])[0])}. Faz sentido."
