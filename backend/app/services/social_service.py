@@ -118,14 +118,16 @@ def add_comment(
                 "actor_name": author.name,
             },
         )
-        author = session.get(Character, post.author_character_id)
-        if author is not None:
-            from app.services.social_arc_service import apply_engagement_consequences
-            apply_engagement_consequences(
-                session, actor=author if author.id == comment.author_character_id else author,
-                author=author, post=post, moment=comment.created_at, kind="comment",
-            )
-        _bump_discovery(session, author, 2)
+        post_author = session.get(Character, post.author_character_id)
+        if post_author is not None:
+            comment_author = session.get(Character, comment.author_character_id)
+            if comment_author is not None:
+                from app.services.social_arc_service import apply_engagement_consequences
+                apply_engagement_consequences(
+                    session, actor=comment_author, author=post_author,
+                    post=post, moment=comment.created_at, kind="comment",
+                )
+            _bump_discovery(session, post_author, 2)
     return comment
 
 
