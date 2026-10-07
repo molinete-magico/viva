@@ -285,8 +285,16 @@ export interface CityPulseHighlight {
   occurred_at: string
 }
 
+export interface CityPulseLocation {
+  location_id: number
+  location_name: string
+  resident_count: number
+}
+
 export interface CityPulse {
   generated_at: string
+  social_weather: string
+  resident_count: number
   recent_posts: CityPulsePost[]
   recent_events: CityPulseEvent[]
   social_highlights: CityPulseHighlight[]
