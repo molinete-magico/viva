@@ -120,6 +120,19 @@ def _interact(session: Session, left: Character, right: Character, location: Loc
             dedupe_key=f"ambient-{owner.id}-{other.id}-{stamp}",
             occurred_at=moment,
         )
+
+    # Fricção também circula pela cidade. Um encontro tenso pode virar um rumor
+    # público sem que o sistema precise transformar todo conflito em uma missão.
+    if tension and _score(f"rumor:{moment.isoformat()}:{left.id}:{right.id}") > 0.78:
+        rumor = Post(
+            author_character_id=left.id,
+            content=f"Alguém mais percebeu que {left.name} e {right.name} não estavam exatamente de acordo hoje?",
+            kind="rumor",
+            location_id=location.id,
+            created_at=moment,
+        )
+        session.add(rumor)
+        session.commit()
     return True
 
 
