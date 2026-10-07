@@ -137,15 +137,15 @@ def _interact(session: Session, left: Character, right: Character, location: Loc
 
 
 def _post_exists_today(session: Session, npc_id: int, moment: datetime) -> bool:
-    rows = session.exec(
-        select(Post).where(Post.author_character_id == npc_id).order_by(Post.id.desc()).limit(8)
-    ).all()
-    return any(
-        post.created_at.year == moment.year
-        and post.created_at.month == moment.month
-        and post.created_at.day == moment.day
-        for post in rows
-    )
+    start = datetime.combine(moment.date(), datetime.min.time(), tzinfo=moment.tzinfo)
+    end = start + timedelta(days=1)
+    return session.exec(
+        select(Post).where(
+            Post.author_character_id == npc_id,
+            Post.created_at >= start,
+            Post.created_at < end,
+        )
+    ).first() is not None
 
 
 def _npc_social_graph(session: Session, npcs: list[Character]) -> None:
@@ -193,7 +193,8 @@ def _daily_activity(session: Session, moment: datetime) -> bool:
     if location is None:
         return False
 
-    activity = (location.activities or ["um encontro espontâneo"])[0]
+    activities = location.activities or ["um encontro espontâneo"]
+    activity = activities[int(_score(f"activity:{location.id}:{moment.date().isoformat()}") * len(activities)) % len(activities)]
     event = Event(
         title=f"{activity.capitalize()} no {location.name}",
         description=f"Uma atividade espontânea organizada por {host.name}. Quem aparecer pode acabar conhecendo gente nova.",
