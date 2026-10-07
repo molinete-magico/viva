@@ -79,7 +79,12 @@ class SessionStateOut(BaseModel):
 
 
 class ActionRequest(BaseModel):
-    action_id: str = Field(min_length=1, max_length=64)
+    action_id: str | None = Field(default=None, min_length=1, max_length=64)
+    free_text: str | None = Field(default=None, min_length=1, max_length=1000)
+
+    def model_post_init(self, __context) -> None:
+        if not self.action_id and not self.free_text:
+            raise ValueError("Informe uma ação ou descreva o que deseja fazer.")
 
 
 class OutcomeOut(BaseModel):

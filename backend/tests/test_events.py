@@ -123,6 +123,39 @@ def test_event_session_playthrough_and_outcome(client):
     assert event_ms["count"] >= 1
 
 
+def test_event_accepts_free_form_player_action(client):
+    headers = auth_headers(client)
+    create_character(client, headers)
+    location_id = _location_id(client, headers)
+    from datetime import datetime, timedelta, timezone
+
+    event = client.post(
+        "/api/events",
+        json={
+            "title": "Conversa espontânea",
+            "location_id": location_id,
+            "scheduled_at": (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat(),
+            "invitees": [],
+        },
+        headers=headers,
+    ).json()
+
+    session_id = client.post(
+        f"/api/events/{event['id']}/sessions",
+        headers=headers,
+    ).json()["session"]["id"]
+
+    response = client.post(
+        f"/api/events/sessions/{session_id}/actions",
+        json={"free_text": "Pego uma cadeira e fico em silêncio observando as pessoas antes de falar."},
+        headers=headers,
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["player_action_id"] == "free_text"
+    assert "Pego uma cadeira" in body["player_action_label"]
+
 def test_abandon_session_returns_event_to_open(client):
     headers = auth_headers(client)
     create_character(client, headers)

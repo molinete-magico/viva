@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta, timezone
 
 from sqlmodel import Session, select
 
@@ -16,6 +16,7 @@ from app.models import (
     EventParticipant,
     EventSession,
     EventTurn,
+    FutureHook,
     Location,
     Notification,
     WorldState,
@@ -277,6 +278,7 @@ def _scene(
     event_session: EventSession,
     *,
     last_action: str | None,
+    free_text_action: str | None = None,
 ) -> dict:
     participants = _npc_participants(session, event, exclude_id=character.id)
     location = session.get(Location, event.location_id) or Location(name="na cidade")
@@ -301,6 +303,7 @@ def _scene(
             chronology=chronology,
             narrative_so_far=narrative_so_far,
             last_action=last_action,
+            free_text_action=free_text_action,
             turn_index=event_session.turn_count,
         )
     )
@@ -326,7 +329,8 @@ def perform_action(
     session: Session,
     character: Character,
     session_id: int,
-    action_id: str,
+    action_id: str | None = None,
+    free_text: str | None = None,
 ) -> EventTurn:
     event_session = session_state(session, character, session_id)
     if event_session.status != de.SESSION_ACTIVE:
@@ -337,10 +341,13 @@ def perform_action(
     turn = last_turn(session, event_session)
     if turn is None:
         raise ServiceError("Sessão ainda sem cena inicial.", 409)
-    chosen = next((a for a in turn.available_actions if a.get("id") == action_id), None)
-    if chosen is None:
-        raise ServiceError("Essa ação não está disponível nesta cena.", 400)
-    effects = chosen.get("effects") or {}
+    chosen = next((a for a in turn.available_actions if a.get("id") == action_id), None) if action_id else None
+    if chosen is None and not free_text:
+        raise ServiceError("Escolha uma ação ou descreva o que deseja fazer.", 400)
+    # Ação livre é intenção narrativa. O LLM pode interpretar a intenção,
+    # mas não recebe autoridade para aplicar consequências de domínio.
+    effects = (chosen.get("effects") if chosen else {}) or {}
+    effective_label = chosen.get("label") if chosen else free_text.strip()[:1000]
 
     money = effects.get("money")
     if money:
@@ -378,15 +385,16 @@ def perform_action(
         character,
         event,
         event_session,
-        last_action=chosen.get("label"),
+        last_action=chosen.get("label") if chosen else None,
+        free_text_action=free_text,
     )
     session.add(character)
     new_turn = _make_turn(
         session,
         event_session,
         turn_index=event_session.turn_count,
-        player_action_id=action_id,
-        player_action_label=chosen.get("label"),
+        player_action_id=action_id or "free_text",
+        player_action_label=effective_label,
         scene=scene,
     )
     return new_turn
@@ -460,13 +468,54 @@ def end_session(session: Session, character: Character, session_id: int, summary
         event.status = de.transition_event(event.status, "complete")
         session.add(event)
 
+    # Um evento significativo pode continuar ecoando depois que termina.
+    # No máximo um gancho pendente de DM por personagem-alvo evita spam.
+    future_hooks: list[dict] = []
+    for npc_id in npc_ids[:2]:
+        pending = session.exec(
+            select(FutureHook).where(
+                FutureHook.target_character_id == character.id,
+                FutureHook.status == "PENDING",
+                FutureHook.kind == "dm_message",
+            )
+        ).first()
+        if pending is not None:
+            continue
+        npc = session.get(Character, npc_id)
+        if npc is None:
+            continue
+        world_state = session.get(WorldState, 1)
+        base_world_dt = (
+            datetime.combine(
+                world_state.current_date,
+                time.fromisoformat(world_state.current_time),
+                tzinfo=timezone.utc,
+            )
+            if world_state is not None
+            else utcnow()
+        )
+        hook = FutureHook(
+            source_type="event",
+            source_id=event.id,
+            target_character_id=character.id,
+            kind="dm_message",
+            payload={
+                "sender_character_id": npc.id,
+                "message": f"Ei. Fiquei pensando em {event.title}. Foi bom você ter ido.",
+            },
+            due_at=base_world_dt + timedelta(days=1),
+        )
+        session.add(hook)
+        session.flush()
+        future_hooks.append({"id": hook.id, "kind": hook.kind, "sender_id": npc.id})
+
     outcome = EventOutcome(
         session_id=session_id,
         summary=summary[:4000],
         relationship_changes=[],
         memories=memories,
         social_effects=[],
-        future_hooks=[],
+        future_hooks=future_hooks,
         applied_at=utcnow(),
     )
     session.add(outcome)

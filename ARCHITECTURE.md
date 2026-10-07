@@ -554,3 +554,51 @@ Configurações (relações/memórias/marcos, painel admin).
 | Evento = 1 sessão do jogador por vez | simplifica idempotência e recovery |
 | Mock LLM como default sem chave | desenvolvimento sem custo/dependência |
 | Feed por cursor (created_at, id) | estável com inserções frequentes |
+
+## 16. VIVA V2 — Autonomia e agência
+
+A implementação agora deve tratar o prompt como comportamento de produto, não como checklist de endpoints.
+
+### Ação livre em eventos
+
+ActionRequest aceita action_id ou free_text. Ações sugeridas continuam sendo atalhos, mas não limitam o jogador. A intenção livre é enviada ao contexto narrativo; efeitos de domínio continuam sendo aplicados somente por serviços.
+
+Fluxo:
+
+    ação sugerida OU texto livre
+    ↓
+    backend valida
+    ↓
+    LLM interpreta intenção
+    ↓
+    nova cena
+    ↓
+    efeitos autorizados pelo domínio
+
+### Consequências assíncronas
+
+Eventos concluídos podem criar FutureHook(kind=dm_message) para um NPC participante. O hook amadurece posteriormente e o catch-up pode entregá-lo como uma DM iniciada pelo NPC. O processamento é idempotente e possui limite de hooks pendentes para evitar spam.
+
+### Iniciativa de NPC
+
+messaging_service.send_npc_initiative() permite que um NPC crie/recupere uma conversa, abra uma sessão e envie uma mensagem sem o jogador iniciar a conversa. A notificação leva diretamente para o DM.
+
+### Regra de produto
+
+O botão de avanço de tempo continua sendo uma ferramenta de desenvolvimento/UX. O mundo deve também produzir consequências por tempo decorrido, future hooks e iniciativas sociais durante catch-up.
+
+### Master Prompt
+
+MASTER_PROMPT_V2.md é a especificação operacional atual para futuras sessões de agente. Ele adiciona agência livre, autonomia NPC↔NPC, iniciativa social, future hooks, descoberta gradual, rumores/segredos e uma Definition of Done baseada em comportamento ponta a ponta.
+
+### Próximos blocos obrigatórios
+
+Ainda devem ser auditados/implementados como evolução do V2:
+
+- grafo social NPC↔NPC persistente e simulado;
+- atividades/locais como espaços realmente interativos;
+- rumores e segredos persistentes;
+- iniciativa social com cooldown/prioridade;
+- resolução de evento natural baseada em estado narrativo, sem depender apenas de limite de turnos;
+- memória bilateral para experiências relevantes;
+- relatório de retorno priorizado por relevância ao jogador.
