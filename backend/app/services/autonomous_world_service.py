@@ -151,9 +151,13 @@ def settle_relationship_tension(session: Session, moment: datetime) -> int:
         if relationship.tension <= 0:
             continue
         if relationship.last_interaction_at:
-            last_interaction = relationship.last_interaction_at if relationship.last_interaction_at.tzinfo is not None else relationship.last_interaction_at.replace(tzinfo=timezone.utc)
+            last_interaction = (
+                relationship.last_interaction_at
+                if relationship.last_interaction_at.tzinfo is not None
+                else relationship.last_interaction_at.replace(tzinfo=timezone.utc)
+            )
             if moment - last_interaction < timedelta(days=1):
-            continue
+                continue
         key = f"tension-cooldown-{relationship.id}-{moment.date().isoformat()}"
         if _marker(session, relationship.character_a_id, key):
             continue
