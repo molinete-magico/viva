@@ -82,28 +82,50 @@ def list_feed(
         query = query.where(Post.id < cursor)
 
     if viewer is not None and scope in ("for_you", "popular"):
-        # Descoberta usa uma janela curta para não quebrar paginação histórica.
-        candidates = session.exec(query.limit(100)).all()
+        candidates = session.exec(query.limit(120)).all()
         from datetime import datetime, timezone
         from app.models import Comment, Relationship
         now = datetime.now(timezone.utc)
+        post_ids = [post.id for post in candidates if post.id is not None]
+        like_rows = session.exec(
+            select(Like.target_id, func.count(Like.id))
+            .where(Like.target_type == "post", Like.target_id.in_(post_ids))
+            .group_by(Like.target_id)
+        ).all()
+        comment_rows = session.exec(
+            select(Comment.post_id, func.count(Comment.id))
+            .where(Comment.post_id.in_(post_ids))
+            .group_by(Comment.post_id)
+        ).all()
+        like_counts = {row[0]: row[1] for row in like_rows}
+        comment_counts = {row[0]: row[1] for row in comment_rows}
+        author_ids = {post.author_character_id for post in candidates}
+        relationships = session.exec(
+            select(Relationship).where(
+                (Relationship.character_a_id == viewer.id) | (Relationship.character_b_id == viewer.id)
+            )
+        ).all()
+        relationship_map = {
+            (item.character_b_id if item.character_a_id == viewer.id else item.character_a_id): item
+            for item in relationships
+        }
         def relevance(post: Post) -> float:
             created_at = post.created_at if post.created_at.tzinfo is not None else post.created_at.replace(tzinfo=timezone.utc)
             age_hours = max(0.25, (now - created_at).total_seconds() / 3600)
-            likes = len(session.exec(select(Like.id).where(Like.target_type == "post", Like.target_id == post.id)).all())
-            comments = len(session.exec(select(Comment.id).where(Comment.post_id == post.id)).all())
-            score = likes * 2.0 + comments * 3.0
+            score = like_counts.get(post.id, 0) * 2.0 + comment_counts.get(post.id, 0) * 3.0
             if post.author_character_id in followed:
                 score += 5.0
-            relationship = session.exec(
-                select(Relationship).where(
-                    ((Relationship.character_a_id == viewer.id) & (Relationship.character_b_id == post.author_character_id))
-                    | ((Relationship.character_a_id == post.author_character_id) & (Relationship.character_b_id == viewer.id))
-                )
-            ).first()
+            relationship = relationship_map.get(post.author_character_id)
             if relationship:
-                score += relationship.friendship * 0.08 + relationship.familiarity * 0.03 - relationship.tension * 0.05
-            score += 8.0 / age_hours
+                score += relationship.friendship * 0.08 + relationship.familiarity * 0.03
+                score += relationship.respect * 0.02 - relationship.tension * 0.05
+            if viewer.current_location_id is not None and post.location_id == viewer.current_location_id:
+                score += 4.0
+            if post.kind == "event":
+                score += 2.0
+            if post.kind == "rumor":
+                score += 1.0 if scope == "popular" else 0.0
+            score += 6.0 / age_hours
             return score
         posts = sorted(candidates, key=relevance, reverse=True)[:limit + 1]
     else:
