@@ -254,6 +254,12 @@ def propagate_social_reactions(session: Session, moment: datetime) -> tuple[int,
                 session.add(Like(target_type="post", target_id=post.id, character_id=npc.id))
                 session.commit()
                 rel.apply_changes(session, npc.id, author.id, {"familiarity": 1, "respect": 1}, log=False)
+                if not author.is_npc and _score(f"follow-after-like:{post.id}:{npc.id}") < 0.22:
+                    existing_follow = session.exec(select(Follow).where(Follow.follower_character_id == npc.id, Follow.followed_character_id == author.id)).first()
+                    if existing_follow is None:
+                        session.add(Follow(follower_character_id=npc.id, followed_character_id=author.id))
+                        session.add(Notification(character_id=author.id, type="NEW_FOLLOWER", payload={"character_id": npc.id, "name": npc.name, "reason": "interagiu_com_seus_posts"}))
+                        session.commit()
                 likes += 1
             if comments == 0 and _score(f"reply:{post.id}:{npc.id}") > 0.72:
                 existing_comment = session.exec(select(Comment).where(Comment.post_id == post.id, Comment.author_character_id == npc.id)).first()
@@ -262,6 +268,12 @@ def propagate_social_reactions(session: Session, moment: datetime) -> tuple[int,
                     session.add(Comment(post_id=post.id, author_character_id=npc.id, content=text[:2000], created_at=moment))
                     session.commit()
                     rel.apply_changes(session, npc.id, author.id, {"familiarity": 1, "friendship": 1}, log=False)
+                    if not author.is_npc and _score(f"follow-after-comment:{post.id}:{npc.id}") < 0.55:
+                        existing_follow = session.exec(select(Follow).where(Follow.follower_character_id == npc.id, Follow.followed_character_id == author.id)).first()
+                        if existing_follow is None:
+                            session.add(Follow(follower_character_id=npc.id, followed_character_id=author.id))
+                            session.add(Notification(character_id=author.id, type="NEW_FOLLOWER", payload={"character_id": npc.id, "name": npc.name, "reason": "respondeu_seu_post"}))
+                            session.commit()
                     comments += 1
                     highlights.append(f"{npc.name} respondeu a uma publicação de {author.name}")
                     break
