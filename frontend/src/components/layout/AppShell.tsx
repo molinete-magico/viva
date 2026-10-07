@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../ui'
@@ -32,6 +33,7 @@ export function AppShell() {
             )}
           </div>
           <div className="flex items-center gap-1">
+            <ThemeToggle />
             <button
               type="button"
               onClick={() => navigate('/notifications')}
@@ -100,6 +102,38 @@ export function AppShell() {
       </nav>
     </div>
   )
+}
+
+function ThemeToggle() {
+  const [dark, setDark] = useState(() => {
+    const saved = localStorage.getItem('viva-theme')
+    return saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    localStorage.setItem('viva-theme', dark ? 'dark' : 'light')
+  }, [dark])
+
+  return (
+    <button
+      type="button"
+      onClick={() => setDark((value) => !value)}
+      aria-label={dark ? 'Ativar tema claro' : 'Ativar tema escuro'}
+      title={dark ? 'Tema claro' : 'Tema escuro'}
+      className="tap flex items-center justify-center rounded-full px-3 text-ink-soft transition hover:bg-line/60"
+    >
+      {dark ? <SunIcon /> : <MoonIcon />}
+    </button>
+  )
+}
+
+function MoonIcon() {
+  return <svg {...iconProps}><path d="M20 15.2A8.4 8.4 0 0 1 8.8 4a8.5 8.5 0 1 0 11.2 11.2Z" /></svg>
+}
+
+function SunIcon() {
+  return <svg {...iconProps}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
 }
 
 function MobileLink({ to, label, icon: Icon }: { to: string; label: string; icon: typeof HomeIcon }) {
