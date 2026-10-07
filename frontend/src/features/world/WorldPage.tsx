@@ -83,7 +83,7 @@ export function WorldPage() {
           <Spinner label="Medindo a movimentação" />
         ) : pulse.data ? (
           <>
-            <p className="mt-2 text-sm text-ink">{pulse.data.social_weather} <span className="text-ink-faint">({pulse.data.resident_count} moradores em movimento)</span></p>
+            <p className="mt-2 text-sm text-ink">{pulse.data.social_weather} <span className="text-ink-faint">({pulse.data.resident_count} moradores em movimento · {pulse.data.activity_count} sinais recentes)</span></p>
             <div className="mt-3 grid grid-cols-2 gap-2">
               {pulse.data.hot_locations.slice(0, 4).map((place) => (
                 <div key={place.location_id} className="rounded-xl bg-paper px-3 py-2">
