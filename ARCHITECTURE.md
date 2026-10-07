@@ -640,3 +640,10 @@ O V3 usa:
 - iniciativa proativa limitada por memória/dia.
 
 Esses limites existem para evitar spam e custo excessivo de LLM, não para tornar o mundo passivo.
+
+
+## 18. Dinâmica social contínua V4
+
+`autonomous_world_service.py` complementa `autonomy_service.py` com manutenção do grafo social, arrefecimento de tensão, resolução de eventos ambientais, reações NPC, propagação de rumores, reputação e o resumo `city_pulse`. `social_arc_service.py` transforma arcos em DMs e encontros concretos. `feed_service.py` oferece o escopo `for_you`/`popular`, ponderando recência, engajamento, follows e relação com o leitor.
+
+A camada continua sem nova tabela: memórias são usadas como marcadores de deduplicação e histórico. O backend determina consequências; o LLM não recebe autoridade sobre estado.
