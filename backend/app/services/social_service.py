@@ -67,7 +67,14 @@ def toggle_post_like(session: Session, actor: Character, post_id: int) -> tuple[
             "POST_LIKE",
             {"post_id": post.id, "actor_id": actor.id, "actor_name": actor.name},
         )
-        _bump_discovery(session, session.get(Character, post.author_character_id), 2)
+        author = session.get(Character, post.author_character_id)
+        if author is not None:
+            from app.services.social_arc_service import apply_engagement_consequences
+            apply_engagement_consequences(
+                session, actor=actor, author=author, post=post,
+                moment=post.created_at, kind="like",
+            )
+        _bump_discovery(session, author, 2)
     return liked, _like_count(session, "post", post_id)
 
 
@@ -111,7 +118,14 @@ def add_comment(
                 "actor_name": author.name,
             },
         )
-        _bump_discovery(session, session.get(Character, post.author_character_id), 2)
+        author = session.get(Character, post.author_character_id)
+        if author is not None:
+            from app.services.social_arc_service import apply_engagement_consequences
+            apply_engagement_consequences(
+                session, actor=author if author.id == comment.author_character_id else author,
+                author=author, post=post, moment=comment.created_at, kind="comment",
+            )
+        _bump_discovery(session, author, 2)
     return comment
 
 
