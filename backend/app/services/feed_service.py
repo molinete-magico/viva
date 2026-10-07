@@ -83,7 +83,7 @@ def list_feed(
 
     if viewer is not None and scope in ("for_you", "popular"):
         # Descoberta usa uma janela curta para não quebrar paginação histórica.
-        candidates = session.exec(query.limit(100).all()).all()
+        candidates = session.exec(query.limit(100)).all()
         from datetime import datetime, timezone
         from app.models import Comment, Relationship
         now = datetime.now(timezone.utc)
