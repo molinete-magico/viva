@@ -223,6 +223,49 @@ def send_with_npc_reply(
     return sent, reply, None
 
 
+def send_npc_initiative(
+    session: Session,
+    npc: Character,
+    target: Character,
+    content: str,
+    *,
+    notification_type: str = "NPC_DM_INITIATIVE",
+) -> Message:
+    """Entrega uma mensagem iniciada por um NPC sem exigir uma tela aberta.
+
+    A conversa continua sendo uma entidade persistente; a iniciativa social é
+    apenas uma nova mensagem/sessão. Não aplica consequências de domínio.
+    """
+    if not npc.is_npc:
+        raise ServiceError("A iniciativa precisa partir de um NPC.", 400)
+    conversation = get_or_create_conversation(session, target, npc)
+    active = ensure_active_session(session, conversation)
+    message = Message(
+        conversation_id=conversation.id,
+        session_id=active.id,
+        sender_character_id=npc.id,
+        content=content.strip()[:5000],
+    )
+    session.add(message)
+    session.commit()
+    session.refresh(message)
+
+    conversation.last_message_at = message.created_at
+    session.add(conversation)
+    session.add(
+        Notification(
+            character_id=target.id,
+            type=notification_type,
+            payload={
+                "conversation_id": conversation.id,
+                "sender_id": npc.id,
+                "sender_name": npc.name,
+            },
+        )
+    )
+    session.commit()
+    return message
+
 def provider_complete(partner: Character, system_prompt: str, user_prompt: str, *, model: str | None = "quick") -> str:
     """Executa o provedor com timeout — reimporta o asyncio aqui para clareza."""
     import asyncio
