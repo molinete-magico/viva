@@ -99,6 +99,10 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
                 social.append(f"{life['posts']} posts espontâneos")
             if life["comments"] or life["likes"]:
                 social.append(f"{life['comments']} comentários e {life['likes']} curtidas entre NPCs")
+            if life["activities"]:
+                social.append(f"{life['activities']} atividade(s) espontânea(s) surgiram na cidade")
+            if life["proactive_dms"]:
+                social.append(f"{life['proactive_dms']} morador(es) procuraram alguém por iniciativa própria")
 
             # A atividade do jogador também entra no ecossistema: NPCs que o seguem
             # podem reagir, mas isso não é a única fonte de vida do feed.
