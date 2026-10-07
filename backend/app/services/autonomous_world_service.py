@@ -11,7 +11,8 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func\nfrom sqlmodel import Session, select
+from sqlalchemy import func
+from sqlmodel import Session, select
 
 from app.models import (
     Character,
