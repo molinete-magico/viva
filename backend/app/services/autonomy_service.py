@@ -16,6 +16,8 @@ from sqlmodel import Session, select
 
 from app.models import Character, Comment, Event, EventParticipant, Follow, Like, Location, Memory, Notification, Post, Schedule, WorldState
 from app.services import relationship_service as rel
+from app.llm import LLMError, get_provider
+from app.llm.prompts import build_initiative_prompt, complete_with_timeout
 
 
 def _score(seed: str) -> float:
@@ -332,10 +334,9 @@ def _proactive_player_contact(session: Session, moment: datetime) -> int:
         hobby = (npc.hobbies or ["a cidade"])[0]
         location = session.get(Location, npc.current_location_id) if npc.current_location_id else None
         place = location.name if location else "por aqui"
-        message = (
-            f"Ei, {player.name}. Estou em {place} agora e lembrei de você. "
-            f"Você ainda curte {hobby}? Tô com vontade de fazer alguma coisa diferente hoje."
-        )
+        message = _natural_initiative_message(session, npc, player, place, hobby, moment)
+        if not message:
+            continue
         try:
             send_npc_initiative(session, npc, player, message)
         except Exception:
@@ -353,6 +354,33 @@ def _proactive_player_contact(session: Session, moment: datetime) -> int:
         )
         sent += 1
     return sent
+
+
+def _natural_initiative_message(session: Session, npc: Character, player: Character, place: str, hobby: str, moment: datetime) -> str:
+    import asyncio
+    system_prompt, user_prompt = build_initiative_prompt(
+        npc_name=npc.name,
+        npc_role=npc.profession_label or "morador(a) da Vila Serena",
+        npc_style=npc.communication_style,
+        npc_personality=npc.personality,
+        npc_hobbies=npc.hobbies,
+        target_name=player.name,
+        place=place,
+        reason=f"está em {place} e tem interesse em {hobby}",
+        world={"time": moment.strftime("%H:%M"), "day_name": ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"][moment.weekday()]},
+    )
+    try:
+        text = asyncio.run(complete_with_timeout(
+            get_provider(),
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            personality=npc.personality,
+            model="quick",
+            timeout=12.0,
+        ))
+    except LLMError:
+        return ""
+    return text.strip()[:5000]
 
 
 def simulate_social_life(session: Session, from_dt: datetime, until_dt: datetime) -> dict:
