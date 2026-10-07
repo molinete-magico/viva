@@ -200,6 +200,20 @@ def _daily_activity(session: Session, moment: datetime) -> bool:
     for npc in nearby:
         session.add(EventParticipant(event_id=event.id, character_id=npc.id, status="JOINED"))
     session.commit()
+
+    players = session.exec(select(Character).where(Character.is_npc.is_(False))).all()
+    if players:
+        from app.services.messaging_service import send_npc_initiative
+        for player in players[:1]:
+            try:
+                send_npc_initiative(
+                    session,
+                    host,
+                    player,
+                    f"Ei, {player.name}! Vai rolar {event.title.lower()} hoje. Eu vou estar lá. Se aparecer, me procura.",
+                )
+            except Exception:
+                pass
     return True
 
 
