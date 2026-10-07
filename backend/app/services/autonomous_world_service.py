@@ -397,6 +397,12 @@ def city_pulse(session: Session, moment: datetime) -> dict:
         .order_by(Memory.importance.desc(), Memory.occurred_at.desc()).limit(10)
     ).all()
     characters = {c.id: c for c in session.exec(select(Character)).all()}
+    locations = {l.id: l for l in session.exec(select(Location)).all()}
+    density = {}
+    for character in characters.values():
+        if character.current_location_id is not None:
+            density[character.current_location_id] = density.get(character.current_location_id, 0) + 1
+    hot_locations = sorted(density.items(), key=lambda item: item[1], reverse=True)[:5]
     return {
         "generated_at": moment.isoformat(),
         "recent_posts": [
@@ -420,7 +426,7 @@ def city_pulse(session: Session, moment: datetime) -> dict:
             }
             for event in events
         ],
-        "social_highlights": [
+        "hot_locations": [\n            {"location_id": location_id, "location_name": locations[location_id].name if location_id in locations else "Lugar", "resident_count": count}\n            for location_id, count in hot_locations\n        ],\n        "social_highlights": [
             {
                 "character_id": memory.owner_character_id,
                 "character_name": characters.get(memory.owner_character_id).name if characters.get(memory.owner_character_id) else "Morador",
