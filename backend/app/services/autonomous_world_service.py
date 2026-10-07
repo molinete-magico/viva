@@ -426,7 +426,11 @@ def city_pulse(session: Session, moment: datetime) -> dict:
             }
             for event in events
         ],
-        "hot_locations": [\n            {"location_id": location_id, "location_name": locations[location_id].name if location_id in locations else "Lugar", "resident_count": count}\n            for location_id, count in hot_locations\n        ],\n        "social_highlights": [
+        "hot_locations": [
+            {"location_id": location_id, "location_name": locations[location_id].name if location_id in locations else "Lugar", "resident_count": count}
+            for location_id, count in hot_locations
+        ],
+        "social_highlights": [
             {
                 "character_id": memory.owner_character_id,
                 "character_name": characters.get(memory.owner_character_id).name if characters.get(memory.owner_character_id) else "Morador",
