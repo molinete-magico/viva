@@ -602,3 +602,41 @@ Ainda devem ser auditados/implementados como evolução do V2:
 - resolução de evento natural baseada em estado narrativo, sem depender apenas de limite de turnos;
 - memória bilateral para experiências relevantes;
 - relatório de retorno priorizado por relevância ao jogador.
+
+
+## 17. VIVA V3 — Motor de mundo vivo
+
+O catch-up social agora é temporal e incremental, através de autonomy_service.
+
+O motor percorre o período simulado em janelas de 90 minutos e pode:
+
+- atualizar posições de NPCs conforme Schedule;
+- formar encontros NPC↔NPC em Location;
+- alterar dimensões de Relationship;
+- criar Memory bilateral;
+- gerar tensão/romance emergentes;
+- publicar posts espontâneos;
+- gerar curtidas/comentários entre NPCs;
+- criar rumores públicos ocasionais;
+- criar uma atividade Event espontânea por dia;
+- convidar o jogador por DM;
+- permitir iniciativa proativa de NPCs;
+- estabelecer uma primeira conexão social para novos personagens.
+
+### Regra de arquitetura
+
+O motor decide quando, quem e qual tipo de ação deve ocorrer. O LLM só escreve a camada narrativa/textual. Estado de domínio continua sendo materializado por serviços existentes.
+
+A simulação não deve ser reduzida a feed request -> generate content. O feed é uma janela para uma sociedade que já estava funcionando.
+
+### Limites
+
+O V3 usa:
+- janelas de 90 minutos;
+- limites de posts por NPC/dia;
+- cooldown por relacionamento;
+- no máximo duas interações por local/janela;
+- uma atividade espontânea por dia;
+- iniciativa proativa limitada por memória/dia.
+
+Esses limites existem para evitar spam e custo excessivo de LLM, não para tornar o mundo passivo.

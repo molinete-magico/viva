@@ -1,6 +1,7 @@
-"""Geração de conteúdo público dos NPCs com o modelo "padrão" (provedor forte)."""
+"""Geração de conteúdo público dos NPCs."""
 
 import asyncio
+from datetime import datetime, time, timezone
 
 from sqlmodel import Session, select
 
@@ -9,8 +10,8 @@ from app.llm.prompts import build_comment_prompt, build_post_prompt, complete_wi
 from app.models import Character, Follow, Post, WorldState
 
 
-def generate_npc_post(session: Session, npc: Character) -> Post:
-    """Gera um post público do NPC usando o painel standard (gpt-oss-120b).
+def generate_npc_post(session: Session, npc: Character, *, simulated_at: datetime | None = None) -> Post:
+    """Gera um post público do NPC usando o modelo rápido.
 
     Levanta LLMError se a API falhar; o chamador decide o que fazer.
     """
@@ -33,12 +34,13 @@ def generate_npc_post(session: Session, npc: Character) -> Post:
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             personality=npc.personality,
-            model="standard",
+            model="quick",
         )
     )
     if not text.strip():
         raise LLMError("O provedor respondeu vazio para o post.")
-    post = Post(author_character_id=npc.id, content=text.strip(), kind="post")
+    post_time = simulated_at or (datetime.combine(world.current_date, time.fromisoformat(world.current_time), tzinfo=timezone.utc) if world else datetime.now(timezone.utc))
+    post = Post(author_character_id=npc.id, content=text.strip(), kind="post", created_at=post_time)
     session.add(post)
     session.commit()
     session.refresh(post)

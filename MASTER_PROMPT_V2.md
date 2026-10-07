@@ -1108,3 +1108,71 @@ Uma funcionalidade social só é considerada concluída quando:
 4. possui cooldown/idempotência contra repetição artificial;
 5. aparece no retorno/catch-up de forma compreensível;
 6. não depende do LLM para garantir invariantes ou autorização.
+
+
+## V3 — Mundo vivo / camada social contínua
+
+A simulação social não pode depender de um único pulso no retorno do jogador.
+
+### Princípio operacional
+
+O relógio do mundo é a fonte temporal. Quando passam 6 horas, o backend deve simular aproximadamente essas 6 horas em janelas menores, preservando os acontecimentos relevantes sem tentar reproduzir cada minuto.
+
+A cada janela, o sistema pode:
+
+- atualizar onde os NPCs estão conforme suas rotinas;
+- detectar quem está no mesmo local;
+- produzir encontros espontâneos entre NPCs;
+- alterar relações e criar memórias bilaterais;
+- publicar posts de moradores mesmo quando ninguém os segue;
+- gerar respostas e curtidas entre moradores;
+- criar uma atividade/evento espontâneo;
+- permitir que um NPC convide o jogador;
+- permitir que um NPC procure o jogador por iniciativa própria;
+- manter a rede de follows e relações crescendo organicamente.
+
+### O jogador não é o scheduler
+
+Não usar:
+- “o NPC só posta porque o jogador abriu o feed”;
+- “o NPC só conversa porque o jogador abriu o DM”;
+- “o NPC só existe quando uma tela precisa dele”.
+
+O jogador pode observar a simulação, mas não é o relógio da cidade.
+
+### Ritmo social
+
+O mundo deve parecer movimentado sem virar spam:
+- atividade social em pequenas ondas;
+- limites por janela;
+- cooldown por par;
+- idempotência por dia;
+- posts e comentários com variedade;
+- apenas uma pequena parte dos NPCs deve tomar iniciativas mais fortes em cada período.
+
+### Primeiro vínculo
+
+Um personagem novo deve possuir pelo menos uma conexão social inicial autônoma. Essa conexão pode virar follow, DM, evento, amizade, rivalidade ou outra relação conforme a simulação evolui.
+
+### Atividades
+
+Além de eventos criados pelo jogador, o mundo pode criar atividades espontâneas. Elas devem:
+1. ter local e horário;
+2. possuir um NPC como anfitrião;
+3. envolver outros moradores;
+4. poder convidar o jogador;
+5. deixar consequências quando o jogador participa.
+
+### Definição de “mundo vivo”
+
+Considerar a camada concluída somente quando, depois de algumas horas sem interação do jogador, seja possível observar pelo menos uma combinação de:
+- novos posts;
+- respostas entre NPCs;
+- mudanças de localização;
+- encontros;
+- mudanças de relacionamento;
+- novas memórias;
+- atividade/evento espontâneo;
+- DM iniciado por NPC.
+
+O objetivo não é reproduzir Status visualmente. O objetivo é reproduzir a propriedade comportamental que torna uma rede social simulada convincente: **quando o jogador volta, ele encontra uma sociedade que continuou existindo sem ele.**

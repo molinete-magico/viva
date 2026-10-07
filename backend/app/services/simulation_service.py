@@ -86,28 +86,32 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
 
     social: list[str] = []
     if with_social:
-        # A cada avanço acionado pelo usuário, NPCs com seguidores publicam o
-        # post do dia e reagem aos posts de humanos — idempotente, sem depender
-        # do relógio do mundo nem do relógio real.
-        from app.services.llm_service import generate_posts_for_active_npcs
-        from app.services.social_service import npc_autonomous_social_pulse, npc_social_reactions
+        # O mundo agora é simulado em fatias de 90 minutos. Isso é importante:
+        # um retorno depois de oito horas não pode parecer um único "pulso" artificial.
+        from app.services.autonomy_service import simulate_social_life
+        from app.services.social_service import npc_social_reactions
 
         try:
-            npc_interactions, npc_memories = npc_autonomous_social_pulse(session)
-            if npc_interactions:
-                social.append(f"{npc_interactions} encontro(s) entre moradores aconteceram sem você")
-            generate_posts_for_active_npcs(session, state.current_date.isoformat())
-            social.append("moradores com seguidores publicaram posts do dia")
+            life = simulate_social_life(session, from_dt, until_dt)
+            if life["interactions"]:
+                social.append(f"{life['interactions']} encontros entre moradores")
+            if life["posts"]:
+                social.append(f"{life['posts']} posts espontâneos")
+            if life["comments"] or life["likes"]:
+                social.append(f"{life['comments']} comentários e {life['likes']} curtidas entre NPCs")
+            if life["activities"]:
+                social.append(f"{life['activities']} atividade(s) espontânea(s) surgiram na cidade")
+            if life["proactive_dms"]:
+                social.append(f"{life['proactive_dms']} morador(es) procuraram alguém por iniciativa própria")
+
+            # A atividade do jogador também entra no ecossistema: NPCs que o seguem
+            # podem reagir, mas isso não é a única fonte de vida do feed.
             likes, comments = npc_social_reactions(session)
             if likes or comments:
-                plural_likes = "curtida" if likes == 1 else "curtidas"
-                plural_comments = "comentário" if comments == 1 else "comentários"
-                social.append(
-                    f"{likes} {plural_likes} e {comments} {plural_comments} nos posts de moradores"
-                )
+                social.append(f"{comments} respostas e {likes} reações aos seus posts")
         except Exception:  # noqa: BLE001
-            logger.exception("social posts during catch-up failed")
-            social.append("posts sociais falharam nesta rodada (sem drama)")
+            logger.exception("autonomous social simulation failed")
+            social.append("a atividade social ficou parcialmente indisponível nesta rodada")
 
     state.last_catchup_at = utcnow()
     paid = sum(p["amount"] for p in economy["payments"])
