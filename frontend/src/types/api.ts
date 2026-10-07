@@ -259,6 +259,39 @@ export interface CatchUpReport {
   summary: string
 }
 
+export interface CityPulsePost {
+  id: number
+  author_id: number
+  author_name: string
+  kind: string
+  content: string
+  created_at: string
+}
+
+export interface CityPulseEvent {
+  id: number
+  title: string
+  status: string
+  scheduled_at: string
+  host_name: string
+}
+
+export interface CityPulseHighlight {
+  character_id: number
+  character_name: string
+  kind: string
+  content: string
+  importance: number
+  occurred_at: string
+}
+
+export interface CityPulse {
+  generated_at: string
+  recent_posts: CityPulsePost[]
+  recent_events: CityPulseEvent[]
+  social_highlights: CityPulseHighlight[]
+}
+
 export interface SimulationLog {
   id: number
   ran_at: string
