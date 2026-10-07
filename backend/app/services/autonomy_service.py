@@ -88,15 +88,18 @@ def _interact(session: Session, left: Character, right: Character, location: Loc
 
     energy = float((left.personality or {}).get("energy", 0.5)) + float((right.personality or {}).get("energy", 0.5))
     friendship_delta = 2 if energy >= 1.1 else 1
-    tension = -1 if any(
+    tension = 2 if any(
         str(item).lower() in " ".join(map(str, right.dislikes or [])).lower()
         for item in (left.hobbies or [])[:2]
     ) else 0
+    if tension:
+        friendship_delta = 0
+    romance = 1 if _score(f"romance:{moment.isoformat()}:{left.id}:{right.id}") > 0.94 else 0
     relationship = rel.apply_changes(
         session,
         left.id,
         right.id,
-        {"familiarity": 1, "friendship": friendship_delta, "respect": 1, "tension": tension},
+        {"familiarity": 1, "friendship": friendship_delta, "respect": 1, "tension": tension, "romance": romance},
         log=True,
     )
     relationship.last_interaction_at = moment
