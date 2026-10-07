@@ -124,15 +124,19 @@ export function Avatar({
       : size === 'lg'
         ? 'h-16 w-16 text-2xl'
         : 'h-11 w-11 text-lg'
-  if (photoUrl) {
-    return (
-      <img
-        src={photoUrl}
-        alt={`Avatar de ${name}`}
-        className={`${classes} shrink-0 rounded-full object-cover ring-1 ring-accent/20`}
-      />
-    )
-  }
+  const portrait = photoUrl || `https://api.dicebear.com/9.x/personas/svg?seed=${encodeURIComponent(name)}&backgroundColor=f7f4ef`
+  return (
+    <img
+      src={portrait}
+      alt={`Avatar de ${name}`}
+      loading="lazy"
+      className={`${classes} shrink-0 rounded-full object-cover ring-1 ring-accent/20`}
+      onError={(event) => {
+        event.currentTarget.onerror = null
+        event.currentTarget.src = `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(name)}`
+      }}
+    />
+  )
   return (
     <span
       aria-hidden
