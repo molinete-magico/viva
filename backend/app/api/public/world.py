@@ -109,6 +109,22 @@ def run_catchup(
     return run(session, with_social=with_social, minutes=minutes)
 
 
+@router.get("/city-pulse", response_model=dict)
+def city_pulse(
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    from app.services.autonomous_world_service import city_pulse as build_pulse
+
+    world = world_service.get_world(session)
+    moment = __import__("datetime").datetime.combine(
+        world.current_date,
+        __import__("datetime").time.fromisoformat(world.current_time),
+        tzinfo=__import__("datetime").timezone.utc,
+    )
+    return build_pulse(session, moment)
+
+
 @router.get("/catchup-report", response_model=Listing[SimulationLogOut])
 def catchup_report(
     user: User = Depends(get_current_user),
