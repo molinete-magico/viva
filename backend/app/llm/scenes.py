@@ -90,7 +90,8 @@ def build_scene_prompt(
         f"Contexto: {chronology} no {location_name}.\n"
         f"Você é {player_name}. O anfitrião é {host_name}.\n"
         f"Cenas anteriores:\n{history}\n\n"
-        "Gere a próxima cena agora."
+        f"Ação livre do jogador nesta rodada: {free_text_text}\n"
+        "Gere a próxima cena agora. Se houver ação livre, ela tem prioridade narrativa sobre as opções sugeridas."
     )
     return system_prompt, user_prompt
 
