@@ -89,6 +89,7 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
         # O mundo agora é simulado em fatias de 90 minutos. Isso é importante:
         # um retorno depois de oito horas não pode parecer um único "pulso" artificial.
         from app.services.autonomy_service import simulate_social_life
+        from app.services.social_arc_service import update_social_arcs, advance_character_goals, propagate_rumors
         from app.services.social_service import npc_social_reactions
 
         try:
@@ -103,6 +104,17 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
                 social.append(f"{life['activities']} atividade(s) espontânea(s) surgiram na cidade")
             if life["proactive_dms"]:
                 social.append(f"{life['proactive_dms']} morador(es) procuraram alguém por iniciativa própria")
+
+            arc_transitions, arc_highlights = update_social_arcs(session, until_dt)
+            goal_progress, goal_highlights = advance_character_goals(session, until_dt)
+            rumors_spread, rumor_highlights = propagate_rumors(session, until_dt)
+            if arc_transitions:
+                social.append(f"{arc_transitions} mudança(s) de arco social")
+            if goal_progress:
+                social.append(f"{goal_progress} objetivo(s) social(is) avançaram")
+            if rumors_spread:
+                social.append(f"{rumors_spread} rumor(es) circularam pela cidade")
+            social.extend((arc_highlights + goal_highlights + rumor_highlights)[:6])
 
             # A atividade do jogador também entra no ecossistema: NPCs que o seguem
             # podem reagir, mas isso não é a única fonte de vida do feed.
