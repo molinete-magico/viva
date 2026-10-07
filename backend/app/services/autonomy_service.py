@@ -14,7 +14,7 @@ from itertools import combinations
 
 from sqlmodel import Session, select
 
-from app.models import Character, Comment, Event, EventParticipant, Follow, Like, Location, Memory, Post, Schedule, WorldState
+from app.models import Character, Comment, Event, EventParticipant, Follow, Like, Location, Memory, Notification, Post, Schedule, WorldState
 from app.services import relationship_service as rel
 
 
@@ -201,6 +201,57 @@ def _daily_activity(session: Session, moment: datetime) -> bool:
         session.add(EventParticipant(event_id=event.id, character_id=npc.id, status="JOINED"))
     session.commit()
     return True
+
+
+def _ensure_player_social_entry(session: Session, players: list[Character], npcs: list[Character]) -> None:
+    """Todo personagem novo entra no mundo já com uma primeira conexão social."""
+    for player in players:
+        if player.id is None:
+            continue
+        existing = session.exec(
+            select(Follow).where(
+                Follow.followed_character_id == player.id,
+                Follow.follower_character_id.in_([npc.id for npc in npcs if npc.id is not None]),
+            )
+        ).first()
+        if existing is not None:
+            continue
+        candidates = sorted(
+            npcs,
+            key=lambda npc: _score(f"starter:{player.id}:{npc.id}"),
+            reverse=True,
+        )
+        if not candidates:
+            continue
+        npc = candidates[0]
+        if npc.id is None:
+            continue
+        session.add(Follow(follower_character_id=npc.id, followed_character_id=player.id))
+        session.add(
+            Notification(
+                character_id=player.id,
+                type="NEW_FOLLOWER",
+                payload={"character_id": npc.id, "name": npc.name, "reason": "morador_da_cidade"},
+            )
+        )
+        session.commit()
+        rel.apply_changes(
+            session,
+            npc.id,
+            player.id,
+            {"familiarity": 2, "respect": 1},
+            log=False,
+        )
+        rel.add_memory(
+            session,
+            owner_character_id=npc.id,
+            other_character_id=player.id,
+            content=f"Comecei a acompanhar {player.name}; quero descobrir quem é essa pessoa nova na Vila Serena.",
+            kind="first_contact",
+            importance=38,
+            dedupe_key=f"first-contact-{npc.id}-{player.id}",
+            occurred_at=datetime.now(timezone.utc),
+        )
 
 
 def _proactive_player_contact(session: Session, moment: datetime) -> int:
