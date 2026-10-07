@@ -113,10 +113,16 @@ def _social_personality(character: Character) -> tuple[float, float]:
 def social_density(session: Session, moment: datetime) -> tuple[int, list[str]]:
     """Locais cheios viram pontos de encontro e geram memória contextual."""
     locations = session.exec(select(Location).where(Location.is_public.is_(True))).all()
+    public_ids = {location.id for location in locations if location.id is not None}
+    all_people = session.exec(select(Character).where(Character.is_npc.is_(True))).all()
+    people_by_location: dict[int, list[Character]] = {}
+    for person in all_people:
+        if person.current_location_id in public_ids:
+            people_by_location.setdefault(person.current_location_id, []).append(person)
     changes = 0
     highlights: list[str] = []
     for location in locations:
-        people = [p for p in _people_at(session, location.id) if p.is_npc]
+        people = people_by_location.get(location.id, [])
         if len(people) < 2:
             continue
         marker = key("density", location.id, moment.date())
