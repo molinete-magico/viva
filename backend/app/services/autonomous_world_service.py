@@ -350,3 +350,54 @@ def run_social_dynamics(session: Session, moment: datetime) -> dict:
             graph_highlights + event_highlights + reaction_highlights + rumor_highlights
         )[:12],
     }
+
+
+def city_pulse(session: Session, moment: datetime) -> dict:
+    """Resumo curto do que está acontecendo agora e do que mudou recentemente."""
+    cutoff = moment - timedelta(hours=12)
+    posts = session.exec(
+        select(Post).where(Post.created_at >= cutoff).order_by(Post.id.desc()).limit(12)
+    ).all()
+    events = session.exec(
+        select(Event).where(Event.scheduled_at >= cutoff).order_by(Event.scheduled_at.desc()).limit(8)
+    ).all()
+    memories = session.exec(
+        select(Memory).where(Memory.occurred_at >= cutoff, Memory.importance >= 35)
+        .order_by(Memory.importance.desc(), Memory.occurred_at.desc()).limit(10)
+    ).all()
+    characters = {c.id: c for c in session.exec(select(Character)).all()}
+    return {
+        "generated_at": moment.isoformat(),
+        "recent_posts": [
+            {
+                "id": post.id,
+                "author_id": post.author_character_id,
+                "author_name": characters.get(post.author_character_id).name if characters.get(post.author_character_id) else "Morador",
+                "kind": post.kind,
+                "content": post.content,
+                "created_at": post.created_at.isoformat(),
+            }
+            for post in posts
+        ],
+        "recent_events": [
+            {
+                "id": event.id,
+                "title": event.title,
+                "status": event.status,
+                "scheduled_at": event.scheduled_at.isoformat(),
+                "host_name": characters.get(event.host_character_id).name if event.host_character_id and characters.get(event.host_character_id) else "cidade",
+            }
+            for event in events
+        ],
+        "social_highlights": [
+            {
+                "character_id": memory.owner_character_id,
+                "character_name": characters.get(memory.owner_character_id).name if characters.get(memory.owner_character_id) else "Morador",
+                "kind": memory.kind,
+                "content": memory.content,
+                "importance": memory.importance,
+                "occurred_at": memory.occurred_at.isoformat(),
+            }
+            for memory in memories
+        ],
+    }
