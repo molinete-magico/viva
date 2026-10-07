@@ -1191,3 +1191,24 @@ Regras adicionais:
 - “Enquanto você estava fora” deve destacar acontecimentos novos e socialmente relevantes;
 - decisões de domínio continuam pertencendo ao backend; LLM só escreve superfície narrativa;
 - toda autonomia precisa de limites diários, dedupe e comportamento determinístico suficiente para catch-up seguro.
+
+## V5 — Cidade cotidiana e efeitos de segunda ordem
+
+A cidade não deve apenas produzir eventos grandes. Ela deve acumular pequenas causas:
+- locais ganham movimento e reputação;
+- moradores têm rotinas de hobby e apego a lugares;
+- encontros fortuitos criam familiaridade;
+- solidão e energia social alteram iniciativas;
+- rivais evitam convivência quando necessário;
+- amizades recebem manutenção;
+- laços antigos podem reaparecer;
+- follows podem ser retribuídos;
+- grupos podem incluir novos moradores;
+- reputação cria descoberta orgânica;
+- eventos deixam eco social no feed;
+- interesses alteram participação em atividades;
+- conflitos podem ser percebidos por terceiros;
+- o feed prioriza relação, local, reputação, tipo e momentum;
+- o retorno do jogador deve revelar movimento sem transformar tudo em notificação.
+
+Toda regra deve continuar determinística, limitada e deduplicada. O estado permanece no backend; a interface apenas revela consequências.
