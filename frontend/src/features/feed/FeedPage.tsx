@@ -9,7 +9,7 @@ import { PostCard } from './PostCard'
 
 export function FeedPage() {
   const { character } = useAuth()
-  const [scope, setScope] = useState<'all' | 'following' | 'for_you'>('all')
+  const [scope, setScope] = useState<'all' | 'following' | 'for_you' | 'popular'>('all')
   const feed = useFetch<FeedResponse>(`/feed?scope=${scope}`, [scope])
 
   return (
@@ -51,6 +51,16 @@ export function FeedPage() {
         </button>
         <button
           type="button"
+          onClick={() => setScope('popular')}
+          aria-pressed={scope === 'popular'}
+          className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
+            scope === 'popular' ? 'bg-accent text-white' : 'text-ink-soft hover:text-ink'
+          }`}
+        >
+          Popular
+        </button>
+        <button
+          type="button"
           onClick={() => setScope('following')}
           aria-pressed={scope === 'following'}
           className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
@@ -67,7 +77,7 @@ export function FeedPage() {
         <ErrorState message={feed.error} onRetry={feed.reload} />
       ) : (feed.data?.items.length ?? 0) === 0 ? (
         <EmptyState
-          title={scope === 'following' ? 'Você ainda não segue ninguém.' : scope === 'for_you' ? 'Ainda não há algo especialmente relevante para você.' : 'A cidade está tranquila hoje.'}
+          title={scope === 'following' ? 'Você ainda não segue ninguém.' : scope === 'for_you' ? 'Ainda não há algo especialmente relevante para você.' : scope === 'popular' ? 'Ainda não há posts em alta.' : 'A cidade está tranquila hoje.'}
           hint={
             scope === 'following'
               ? 'Explore os moradores e siga quem você gosta.'
