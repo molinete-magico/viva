@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlmodel import Session, select
 
-from app.models import Character, Follow, Memory, Post, Relationship
+from app.models import Character, Event, EventParticipant, Follow, Memory, Notification, Post, Relationship
 from app.services import relationship_service as rel
 
 
@@ -382,7 +382,9 @@ def advance_social_intentions(
             "strained": 0.42,
             "budding_friendship": 0.34,
         }.get(arc, 0.2)
-        if _score(f"intent:{actor.id}:{target.id}:{day}") > chance:
+        energy = float((actor.personality or {}).get("energy", 0.5))
+        social_drive = float((actor.personality or {}).get("sociability", (actor.personality or {}).get("social", 0.5)))
+        if _score(f"intent:{actor.id}:{target.id}:{day}") > min(0.92, chance + energy * 0.08 + social_drive * 0.06):
             continue
 
         message: str | None = None
@@ -432,6 +434,29 @@ def advance_social_intentions(
                 highlights.append(f"{actor.name} provocou alguém em público")
             continue
 
+        if arc in ("friendship", "romance") and actor.current_location_id is not None and _score(f"meetup:{actor.id}:{target.id}:{day}") < (0.28 if arc == "friendship" else 0.42):
+            event = Event(
+                title=("Encontro com " if arc == "romance" else "Rolê com ") + target.name,
+                description=f"{actor.name} tomou a iniciativa de encontrar {target.name}.",
+                location_id=actor.current_location_id,
+                host_character_id=actor.id,
+                created_by="system",
+                scheduled_at=moment + timedelta(hours=1),
+                status="OPEN",
+                kind="social_arc",
+                max_participants=2,
+            )
+            session.add(event)
+            session.commit()
+            session.refresh(event)
+            session.add(EventParticipant(event_id=event.id, character_id=actor.id, status="JOINED", responded_at=moment, joined_at=moment))
+            session.add(EventParticipant(event_id=event.id, character_id=target.id, status="INVITED"))
+            if target.user_id is not None:
+                session.add(Notification(character_id=target.id, type="EVENT_INVITE", payload={"event_id": event.id, "title": event.title, "scheduled_at": event.scheduled_at.isoformat(), "host_id": actor.id}))
+            session.commit()
+            message = f"Quero te ver mais tarde, {target.name}. Separei um encontro para nós. Se puder, aparece."
+            kind = "social_invitation"
+            changes = {"familiarity": 1, "friendship": 2 if arc == "friendship" else 1, "romance": 1 if arc == "romance" else 0}
         try:
             send_npc_initiative(session, actor, target, message)
         except Exception:
