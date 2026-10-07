@@ -22,3 +22,10 @@ def test_city_life_keeps_aware_datetimes():
 def test_city_life_has_second_order_runner():
     from app.services.city_life_service import _run_city_life_base
     assert callable(_run_city_life_base)
+
+
+def test_city_life_second_order_functions_are_available():
+    from app.services.city_life_service import memory_consolidation, social_group_formation, social_spending
+    assert callable(memory_consolidation)
+    assert callable(social_group_formation)
+    assert callable(social_spending)
