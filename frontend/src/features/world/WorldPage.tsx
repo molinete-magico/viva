@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../services/api'
 import { ErrorState, Spinner, useFetch, WarningBanner } from '../../components/ui'
-import type { CatchUpReport, Listing, SimulationLog, World } from '../../types/api'
+import type { CatchUpReport, CityPulse, Listing, SimulationLog, World } from '../../types/api'
 
 export function WorldPage() {
   const world = useFetch<World>('/world')
   const report = useFetch<Listing<SimulationLog>>('/world/catchup-report')
+  const pulse = useFetch<CityPulse>('/world/city-pulse')
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
@@ -75,6 +76,32 @@ export function WorldPage() {
           {busy ? 'A cidade se mexendo…' : 'Pular para o próximo dia'}
         </button>
       </div>
+
+      <section className="mt-4 rounded-2xl border border-line bg-surface p-4">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Enquanto você estava fora</h2>
+        {pulse.loading ? (
+          <Spinner label="Reconstruindo o que aconteceu" />
+        ) : pulse.data ? (
+          <div className="mt-3 space-y-3">
+            {pulse.data.social_highlights.slice(0, 4).map((item) => (
+              <div key={`${item.character_id}-${item.occurred_at}-${item.kind}`} className="border-l-2 border-accent pl-3">
+                <p className="text-sm text-ink"><strong>{item.character_name}</strong> — {item.content}</p>
+              </div>
+            ))}
+            {pulse.data.recent_posts.slice(0, 3).map((post) => (
+              <div key={post.id} className="border-t border-line pt-2">
+                <p className="text-xs font-medium text-ink-soft">{post.author_name} · {post.kind}</p>
+                <p className="mt-1 text-sm text-ink">{post.content}</p>
+              </div>
+            ))}
+            {!pulse.data.social_highlights.length && !pulse.data.recent_posts.length && (
+              <p className="text-sm text-ink-faint">A cidade esteve quieta por enquanto.</p>
+            )}
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-ink-faint">O pulso da cidade ainda não foi calculado.</p>
+        )}
+      </section>
 
       <section className="mt-4 rounded-2xl border border-line bg-surface p-4">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Relatório do tempo</h2>
