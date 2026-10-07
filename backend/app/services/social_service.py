@@ -2,9 +2,10 @@ from sqlmodel import Session, select
 
 from app.domain.errors import ServiceError
 from app.llm import LLMError
-from app.models import Character, Comment, Follow, Like, Notification, Post
+from app.models import Character, Comment, Follow, Like, Location, Notification, Post
 from app.schemas.social import CommentOut, comment_out
 from app.services.character_service import photo_url_map
+from app.services import relationship_service as rel
 
 
 def _target_post(session: Session, post_id: int) -> Post:
