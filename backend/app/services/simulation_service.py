@@ -90,6 +90,7 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
         # um retorno depois de oito horas não pode parecer um único "pulso" artificial.
         from app.services.autonomy_service import simulate_social_life
         from app.services.social_arc_service import update_social_arcs, advance_character_goals, propagate_rumors, advance_social_intentions
+from app.services.autonomous_world_service import run_social_dynamics
         from app.services.social_service import npc_social_reactions
 
         try:
@@ -117,7 +118,16 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
                 social.append(f"{goal_progress} objetivo(s) social(is) avançaram")
             if rumors_spread:
                 social.append(f"{rumors_spread} rumor(es) circularam pela cidade")
-            social.extend((arc_highlights + intent_highlights + goal_highlights + rumor_highlights)[:8])
+            dynamics = run_social_dynamics(session, until_dt)
+            if dynamics["graph_changes"]:
+                social.append(f"{dynamics['graph_changes']} mudança(s) no grafo social")
+            if dynamics["events_resolved"]:
+                social.append(f"{dynamics['events_resolved']} atividade(s) autônoma(s) terminaram")
+            if dynamics["rumors"]:
+                social.append(f"{dynamics['rumors']} pessoa(s) ouviram rumores")
+            if dynamics["reputation_updates"]:
+                social.append(f"{dynamics['reputation_updates']} perfil(is) ganharam visibilidade")
+            social.extend((arc_highlights + intent_highlights + goal_highlights + rumor_highlights + dynamics["highlights"])[:12])
 
             # A atividade do jogador também entra no ecossistema: NPCs que o seguem
             # podem reagir, mas isso não é a única fonte de vida do feed.
