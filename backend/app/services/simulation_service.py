@@ -90,7 +90,7 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
         # um retorno depois de oito horas não pode parecer um único "pulso" artificial.
         from app.services.autonomy_service import simulate_social_life
         from app.services.social_arc_service import update_social_arcs, advance_character_goals, propagate_rumors, advance_social_intentions
-from app.services.autonomous_world_service import run_social_dynamics
+        from app.services.autonomous_world_service import run_social_dynamics
         from app.services.social_service import npc_social_reactions
 
         try:
