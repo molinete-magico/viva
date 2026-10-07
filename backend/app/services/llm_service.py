@@ -38,7 +38,7 @@ def generate_npc_post(session: Session, npc: Character, *, simulated_at: datetim
     )
     if not text.strip():
         raise LLMError("O provedor respondeu vazio para o post.")
-    post = Post(author_character_id=npc.id, content=text.strip(), kind="post", created_at=simulated_at or (world and datetime.combine(world.current_date, datetime.strptime(world.current_time, "%H:%M").time(), tzinfo=__import__("datetime").timezone.utc)) or datetime.now(__import__("datetime").timezone.utc))
+    post_time = simulated_at or (datetime.combine(world.current_date, time.fromisoformat(world.current_time), tzinfo=timezone.utc) if world else datetime.now(timezone.utc))\n    post = Post(author_character_id=npc.id, content=text.strip(), kind="post", created_at=post_time)
     session.add(post)
     session.commit()
     session.refresh(post)
