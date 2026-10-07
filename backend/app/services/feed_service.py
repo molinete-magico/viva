@@ -88,7 +88,8 @@ def list_feed(
         from app.models import Comment, Relationship
         now = datetime.now(timezone.utc)
         def relevance(post: Post) -> float:
-            age_hours = max(0.25, (now - post.created_at).total_seconds() / 3600)
+            created_at = post.created_at if post.created_at.tzinfo is not None else post.created_at.replace(tzinfo=timezone.utc)
+            age_hours = max(0.25, (now - created_at).total_seconds() / 3600)
             likes = len(session.exec(select(Like.id).where(Like.target_type == "post", Like.target_id == post.id)).all())
             comments = len(session.exec(select(Comment.id).where(Comment.post_id == post.id)).all())
             score = likes * 2.0 + comments * 3.0
