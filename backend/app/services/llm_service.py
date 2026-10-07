@@ -9,7 +9,7 @@ from app.llm.prompts import build_comment_prompt, build_post_prompt, complete_wi
 from app.models import Character, Follow, Post, WorldState
 
 
-def generate_npc_post(session: Session, npc: Character) -> Post:
+def generate_npc_post(session: Session, npc: Character, *, simulated_at: datetime | None = None) -> Post:
     """Gera um post público do NPC usando o painel standard (gpt-oss-120b).
 
     Levanta LLMError se a API falhar; o chamador decide o que fazer.
@@ -33,12 +33,12 @@ def generate_npc_post(session: Session, npc: Character) -> Post:
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             personality=npc.personality,
-            model="standard",
+            model="quick",
         )
     )
     if not text.strip():
         raise LLMError("O provedor respondeu vazio para o post.")
-    post = Post(author_character_id=npc.id, content=text.strip(), kind="post")
+    post = Post(author_character_id=npc.id, content=text.strip(), kind="post", created_at=simulated_at or (world and datetime.combine(world.current_date, datetime.strptime(world.current_time, "%H:%M").time(), tzinfo=__import__("datetime").timezone.utc)) or datetime.now(__import__("datetime").timezone.utc))
     session.add(post)
     session.commit()
     session.refresh(post)
