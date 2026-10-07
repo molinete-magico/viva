@@ -17,3 +17,8 @@ def test_city_life_normalizes_sqlite_datetimes():
 def test_city_life_keeps_aware_datetimes():
     value = datetime(2026, 10, 7, 12, 0, tzinfo=timezone.utc)
     assert normalized(value) is value
+
+
+def test_city_life_has_second_order_runner():
+    from app.services.city_life_service import _run_city_life_base
+    assert callable(_run_city_life_base)
