@@ -13,7 +13,7 @@ export function FeedPage() {
   const feed = useFetch<FeedResponse>(`/feed?scope=${scope}`, [scope])
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-5">
+    <div className="mx-auto max-w-3xl px-4 py-5">
       {!character && (
         <Link
           to="/onboarding"
@@ -28,12 +28,12 @@ export function FeedPage() {
 
       {character && <Composer onPosted={feed.reload} />}
 
-      <div className="mt-2 flex gap-1 rounded-full border border-line bg-surface p-1">
+      <div className="mt-3 grid grid-cols-4 rounded-2xl border border-line bg-surface/80 p-1 backdrop-blur">
         <button
           type="button"
           onClick={() => setScope('all')}
           aria-pressed={scope === 'all'}
-          className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
+          className={`rounded-xl px-3 py-2 text-xs font-bold transition sm:text-sm ${
             scope === 'all' ? 'bg-accent text-white' : 'text-ink-soft hover:text-ink'
           }`}
         >
@@ -119,7 +119,7 @@ function Composer({ onPosted }: { onPosted: () => void }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mb-5 rounded-2xl border border-line bg-surface p-4">
+    <form onSubmit={onSubmit} className="viva-panel mb-4 rounded-3xl border border-line bg-surface p-5">
       <label className="sr-only" htmlFor="composer">
         O que está acontecendo?
       </label>
