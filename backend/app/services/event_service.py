@@ -16,6 +16,7 @@ from app.models import (
     EventParticipant,
     EventSession,
     EventTurn,
+    FutureHook,
     Location,
     Notification,
     WorldState,
@@ -467,13 +468,44 @@ def end_session(session: Session, character: Character, session_id: int, summary
         event.status = de.transition_event(event.status, "complete")
         session.add(event)
 
+    # Um evento significativo pode continuar ecoando depois que termina.
+    # No máximo um gancho pendente de DM por personagem-alvo evita spam.
+    future_hooks: list[dict] = []
+    for npc_id in npc_ids[:2]:
+        pending = session.exec(
+            select(FutureHook).where(
+                FutureHook.target_character_id == character.id,
+                FutureHook.status == "PENDING",
+                FutureHook.kind == "dm_message",
+            )
+        ).first()
+        if pending is not None:
+            continue
+        npc = session.get(Character, npc_id)
+        if npc is None:
+            continue
+        hook = FutureHook(
+            source_type="event",
+            source_id=event.id,
+            target_character_id=character.id,
+            kind="dm_message",
+            payload={
+                "sender_character_id": npc.id,
+                "message": f"Ei. Fiquei pensando em {event.title}. Foi bom você ter ido.",
+            },
+            due_at=utcnow() + timedelta(days=1),
+        )
+        session.add(hook)
+        session.flush()
+        future_hooks.append({"id": hook.id, "kind": hook.kind, "sender_id": npc.id})
+
     outcome = EventOutcome(
         session_id=session_id,
         summary=summary[:4000],
         relationship_changes=[],
         memories=memories,
         social_effects=[],
-        future_hooks=[],
+        future_hooks=future_hooks,
         applied_at=utcnow(),
     )
     session.add(outcome)
