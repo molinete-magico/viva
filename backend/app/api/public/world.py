@@ -1,3 +1,5 @@
+from datetime import datetime, time, timezone
+
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session, select
 
@@ -117,10 +119,10 @@ def city_pulse(
     from app.services.autonomous_world_service import city_pulse as build_pulse
 
     world = world_service.get_world(session)
-    moment = __import__("datetime").datetime.combine(
+    moment = datetime.combine(
         world.current_date,
-        __import__("datetime").time.fromisoformat(world.current_time),
-        tzinfo=__import__("datetime").timezone.utc,
+        time.fromisoformat(world.current_time),
+        tzinfo=timezone.utc,
     )
     return build_pulse(session, moment)
 
