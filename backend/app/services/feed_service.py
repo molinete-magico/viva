@@ -100,7 +100,7 @@ def list_feed(
         like_counts = {row[0]: row[1] for row in like_rows}
         comment_counts = {row[0]: row[1] for row in comment_rows}
         author_ids = {post.author_character_id for post in candidates}
-        relationships = session.exec(
+        authors = {c.id: c for c in session.exec(select(Character).where(Character.id.in_(author_ids))).all()}\n        relationships = session.exec(
             select(Relationship).where(
                 (Relationship.character_a_id == viewer.id) | (Relationship.character_b_id == viewer.id)
             )
@@ -125,7 +125,7 @@ def list_feed(
                 score += 2.0
             if post.kind == "rumor":
                 score += 1.0 if scope == "popular" else 0.0
-            score += 6.0 / age_hours
+            score += 6.0 / age_hours\n            if scope == "popular":\n                score += like_counts.get(post.id, 0) * 0.5 + comment_counts.get(post.id, 0) * 0.8
             return score
         posts = sorted(candidates, key=relevance, reverse=True)[:limit + 1]
     else:
