@@ -100,7 +100,8 @@ def list_feed(
         like_counts = {row[0]: row[1] for row in like_rows}
         comment_counts = {row[0]: row[1] for row in comment_rows}
         author_ids = {post.author_character_id for post in candidates}
-        authors = {c.id: c for c in session.exec(select(Character).where(Character.id.in_(author_ids))).all()}\n        relationships = session.exec(
+        authors = {c.id: c for c in session.exec(select(Character).where(Character.id.in_(author_ids))).all()}
+        relationships = session.exec(
             select(Relationship).where(
                 (Relationship.character_a_id == viewer.id) | (Relationship.character_b_id == viewer.id)
             )
