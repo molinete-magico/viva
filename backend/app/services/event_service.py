@@ -397,6 +397,19 @@ def perform_action(
         player_action_label=effective_label,
         scene=scene,
     )
+
+    # O narrador pode declarar que a situação chegou naturalmente ao fim.
+    # Isso não concede autoridade sobre efeitos: end_session continua sendo
+    # o único caminho que materializa memória, milestone, outcome e future hooks.
+    flags = scene.get("_flags") if isinstance(scene.get("_flags"), dict) else {}
+    natural_end = bool(
+        flags.get("complete")
+        or flags.get("event_complete")
+        or flags.get("session_complete")
+    )
+    if natural_end and event_session.status == de.SESSION_ACTIVE:
+        end_session(session, character, session_id)
+
     return new_turn
 
 
