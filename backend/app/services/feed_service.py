@@ -126,7 +126,9 @@ def list_feed(
                 score += 2.0
             if post.kind == "rumor":
                 score += 1.0 if scope == "popular" else 0.0
-            score += 6.0 / age_hours\n            if scope == "popular":\n                score += like_counts.get(post.id, 0) * 0.5 + comment_counts.get(post.id, 0) * 0.8
+            score += 6.0 / age_hours
+            if scope == "popular":
+                score += like_counts.get(post.id, 0) * 0.5 + comment_counts.get(post.id, 0) * 0.8
             return score
         posts = sorted(candidates, key=relevance, reverse=True)[:limit + 1]
     else:
