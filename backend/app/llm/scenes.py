@@ -74,15 +74,15 @@ def build_scene_prompt(
     system_prompt = (
         "Você é o narrador de uma cena interativa de RPG de cidade pequena brasileira, ambientada "
         f"na Vila Serena. A cena é \"{event_title}\".\n"
-        f"Saia APENAS um JSON válido, sem markdown, com exatamente 3 chaves:\n"
-        '{"narrative": "...", "dialogue": [{"speaker": "...", "line": "..."}], "actions": [{"id": "...", "label": "...", "effects": {"memory": "...", "memory_importance": 20}, "hint": "..."}]}\n'
+        f"Saia APENAS um JSON válido, sem markdown, com estas 4 chaves:\n"
+        '{"narrative": "...", "dialogue": [{"speaker": "...", "line": "..."}], "actions": [{"id": "...", "label": "...", "effects": {"memory": "...", "memory_importance": 20}, "hint": "..."}], "flags": {"complete": false}}\n'
         "Regras: narrative em português do Brasil, 2 a 4 frases, avançando a cena com o impacto da "
         f"última ação do jogador ({action_text}); dialogue 1 a 3 falas dos participantes "
         f"({who}, com {host_name} entre eles) no tom deles e coerentes com as versões anteriores; "
         "As opções são sugestões, não limites da imaginação do jogador. O jogador também pode "
         "descrever qualquer ação livre em texto; trate essa intenção como a ação real da cena e "
         "faça os personagens reagirem a ela. Não invente capacidades impossíveis. "
-        "actions com 3 a 5 opções, id curto em snake_case, label em PT-BR, e effects podendo conter "
+        "actions com 3 a 5 opções, id curto em snake_case, label em PT-BR, e flags.complete=true somente quando a situação tiver chegado naturalmente a uma conclusão (despedida, objetivo alcançado, resolução ou encerramento claro); caso contrário, false. effects podendo conter "
         '"money" (variação em R$), uma relação ("bosst/menos" nos campos familiarity, friendship, trust, '
         'romance, respect, tension) e/ou "memory" (memória que o jogador guarda).'
     )
