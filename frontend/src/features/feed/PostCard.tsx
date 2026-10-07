@@ -75,12 +75,12 @@ export function PostCard({
   const isMine = currentCharacterId === post.author.id
 
   return (
-    <article className="rounded-2xl border border-line bg-surface p-4">
+    <article className="viva-post border-b border-line bg-transparent px-1 py-5 sm:px-2">
       <div className="flex items-start gap-3">
         <Avatar name={post.author.name} photoUrl={post.author.photo_url} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <Link to={`/profile/${post.author.id}`} className="truncate text-sm font-semibold text-ink hover:underline">
+            <Link to={`/profile/${post.author.id}`} className="truncate text-[15px] font-bold text-ink hover:underline">
               {post.author.name}
             </Link>
             {isMine && (
@@ -107,7 +107,7 @@ export function PostCard({
         </div>
       </div>
 
-      <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-ink">{post.content}</p>
+      <p className="mt-3 whitespace-pre-wrap text-[15px] leading-[1.65] text-ink">{post.content}</p>
 
       <div className="mt-3 flex items-center gap-1">
         <button
@@ -115,7 +115,7 @@ export function PostCard({
           onClick={toggleLike}
           disabled={!currentCharacterId || togglingLike}
           aria-pressed={liked}
-          className={`tap flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition disabled:opacity-40 ${
+          className={`viva-action tap flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition disabled:opacity-40 ${
             liked ? 'bg-accent/15 text-accent-deep' : 'text-ink-soft hover:bg-paper hover:text-ink'
           }`}
         >
@@ -126,7 +126,7 @@ export function PostCard({
           type="button"
           onClick={toggleComments}
           aria-expanded={showComments}
-          className="tap flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:bg-paper hover:text-ink"
+          className="viva-action tap flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:bg-paper hover:text-ink"
         >
           <span aria-hidden>💬</span>
           {post.comments_count} {post.comments_count === 1 ? 'comentário' : 'comentários'}
