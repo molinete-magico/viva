@@ -21,11 +21,11 @@ export function AppShell() {
   const unread = (notifications.data?.items ?? []).filter((n) => !n.read_at).length
 
   return (
-    <div className="min-h-dvh lg:flex">
-      <header className="safe-top sticky top-0 z-30 border-b border-line bg-paper/95 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-3xl items-center justify-between gap-3 px-4 lg:max-w-5xl">
+    <div className="viva-shell min-h-dvh lg:flex">
+      <header className="safe-top sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-3xl items-center justify-between gap-3 px-4 lg:max-w-6xl lg:px-8">
           <div className="flex items-baseline gap-3">
-            <span className="font-display text-xl font-semibold tracking-tight text-ink">Viva</span>
+            <span className="font-display text-2xl font-black tracking-tight text-ink">Viva<span className="text-accent">.</span></span>
             {world.data && (
               <span className="hidden text-xs text-ink-soft sm:inline">
                 {world.data.city_name} · {world.data.day_name}, {world.data.time}
@@ -59,8 +59,8 @@ export function AppShell() {
         </div>
       </header>
 
-      <div className="flex w-full">
-        <nav aria-label="Navegação principal" className="hidden w-52 shrink-0 py-8 pl-6 lg:block">
+      <div className="mx-auto flex w-full max-w-6xl">
+        <nav aria-label="Navegação principal" className="hidden w-60 shrink-0 border-r border-line py-8 pr-6 lg:block">
           <ul className="space-y-1">
             {navItems.map((item) => (
               <li key={item.to}>
@@ -83,7 +83,7 @@ export function AppShell() {
           </button>
         </nav>
 
-        <main className="min-w-0 flex-1 pb-24 lg:pb-10">
+        <main className="min-w-0 flex-1 pb-24 lg:pb-10 lg:px-8">
           <Outlet />
         </main>
       </div>
@@ -157,8 +157,8 @@ function DesktopLink({ to, label, icon: Icon }: { to: string; label: string; ico
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-          isActive ? 'bg-accent-soft text-accent-deep' : 'text-ink-soft hover:bg-line/60'
+        `flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-semibold transition ${
+          isActive ? 'border-accent/20 bg-accent-soft text-accent-deep' : 'border-transparent text-ink-soft hover:border-line hover:bg-surface'
         }`
       }
     >
