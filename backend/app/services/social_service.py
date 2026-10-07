@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlmodel import Session, select
 
 from app.domain.errors import ServiceError
@@ -232,7 +234,7 @@ def unfollow_character(session: Session, follower: Character, target_id: int) ->
             content=f"Deixei de acompanhar {target.name}.",
             kind="social_graph_change",
             importance=16,
-            dedupe_key=f"unfollow-{follower.id}-{target.id}-{__import__('datetime').datetime.now().date().isoformat()}",
+            dedupe_key=f"unfollow-{follower.id}-{target.id}-{datetime.now(timezone.utc).date().isoformat()}",
         )
 
 
