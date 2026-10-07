@@ -476,7 +476,7 @@ def player_relevance_notifications(session: Session, moment: datetime) -> int:
     return created
 
 
-def run_city_life(session: Session, moment: datetime) -> dict:
+def _run_city_life_base(session: Session, moment: datetime) -> dict:
     results = {}
     results["density"], density_h = social_density(session, moment)
     results["encounters"], encounter_h = serendipitous_encounters(session, moment)
@@ -494,3 +494,67 @@ def run_city_life(session: Session, moment: datetime) -> dict:
         avoidance_h + opportunity_h + discovery_h + conversation_h + reputation_h
     )[:18]
     return results
+
+def reciprocity(session: Session, moment: datetime) -> tuple[int, list[str]]:
+    """Gestos sociais recentes podem receber uma resposta posterior."""
+    actions, highlights = 0, []
+    for npc in session.exec(select(Character).where(Character.is_npc.is_(True))).all():
+        if npc.id is None: continue
+        memories = session.exec(select(Memory).where(Memory.owner_character_id == npc.id, Memory.kind == "social_engagement", Memory.occurred_at >= moment - timedelta(days=2)).limit(4)).all()
+        for memory in memories:
+            if memory.other_character_id is None: continue
+            other = session.get(Character, memory.other_character_id)
+            marker = key("reciprocity", memory.id, npc.id)
+            if other is None or other.id is None or already(session, npc.id, marker) or score(f"reciprocity:{memory.id}:{npc.id}") >= 0.18: continue
+            rel.apply_changes(session, npc.id, other.id, {"trust": 1, "respect": 1}, log=False)
+            remember(session, npc, other, f"Quis retribuir uma atitude recente de {other.name}.", "reciprocity", marker, moment, 27)
+            actions += 1; highlights.append(f"{npc.name} retribuiu um gesto de {other.name}"); break
+    return actions, highlights[:6]
+
+def dormant_ties(session: Session, moment: datetime) -> tuple[int, list[str]]:
+    """Laços bons sem contato podem voltar à superfície."""
+    actions, highlights = 0, []
+    for relationship in session.exec(select(Relationship)).all():
+        if relationship.friendship < 40 or relationship.tension >= 25 or not relationship.last_interaction_at: continue
+        if moment - normalized(relationship.last_interaction_at) < timedelta(days=3): continue
+        a = session.get(Character, relationship.character_a_id); b = session.get(Character, relationship.character_b_id)
+        marker = key("dormant-tie", relationship.id, moment.date())
+        if a is None or b is None or a.id is None or b.id is None or already(session, a.id, marker) or score(f"dormant:{relationship.id}:{moment.date()}") >= 0.24: continue
+        rel.apply_changes(session, a.id, b.id, {"familiarity": 1}, log=False)
+        remember(session, a, b, f"Depois de alguns dias, voltei a pensar em {b.name}.", "dormant_tie", marker, moment, 28)
+        actions += 1; highlights.append(f"{a.name} retomou um laço antigo com {b.name}")
+    return actions, highlights[:6]
+
+def tension_spillover(session: Session, moment: datetime) -> tuple[int, list[str]]:
+    """Conflitos fortes são percebidos por pessoas próximas sem criar inimigos artificiais."""
+    actions, highlights = 0, []
+    for conflict in session.exec(select(Relationship).where(Relationship.tension >= 60)).all():
+        a = session.get(Character, conflict.character_a_id); b = session.get(Character, conflict.character_b_id)
+        if a is None or b is None or a.id is None or b.id is None: continue
+        for row in session.exec(select(Follow).where(Follow.follower_character_id == a.id)).all()[:4]:
+            observer = session.get(Character, row.followed_character_id); marker = key("spillover", conflict.id, row.followed_character_id, moment.date())
+            if observer is None or observer.id in (a.id, b.id) or already(session, observer.id, marker): continue
+            if score(f"spillover:{conflict.id}:{observer.id}:{moment.date()}") < 0.18:
+                remember(session, observer, a, f"Percebi que {a.name} está em conflito com {b.name}.", "tension_spillover", marker, moment, 24)
+                actions += 1; highlights.append(f"{observer.name} percebeu uma tensão social")
+    return actions, highlights[:6]
+
+def location_loyalty(session: Session, moment: datetime) -> tuple[int, list[str]]:
+    """Frequência cria apego a lugares e reforça rotinas futuras."""
+    actions = 0
+    for npc in session.exec(select(Character).where(Character.is_npc.is_(True))).all():
+        if npc.id is None or npc.current_location_id is None: continue
+        marker = key("location-loyalty", npc.id, npc.current_location_id, moment.date())
+        if already(session, npc.id, marker) or score(f"loyalty:{npc.id}:{npc.current_location_id}:{moment.date()}") > 0.25: continue
+        favorite = list(npc.favorite_location_ids or [])
+        if npc.current_location_id not in favorite:
+            npc.favorite_location_ids = favorite + [npc.current_location_id]; session.add(npc); actions += 1
+    if actions: session.commit()
+    return actions, []
+
+def run_city_life(session: Session, moment: datetime) -> dict:
+    result = _run_city_life_base(session, moment)
+    extra = [reciprocity(session, moment), dormant_ties(session, moment), tension_spillover(session, moment), location_loyalty(session, moment)]
+    result["second_order"] = sum(item[0] for item in extra)
+    result["highlights"] = (result["highlights"] + [h for _, hs in extra for h in hs])[:28]
+    return result
