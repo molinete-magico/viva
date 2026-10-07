@@ -78,6 +78,25 @@ export function WorldPage() {
       </div>
 
       <section className="mt-4 rounded-2xl border border-line bg-surface p-4">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Pulso da cidade</h2>
+        {pulse.loading ? (
+          <Spinner label="Medindo a movimentação" />
+        ) : pulse.data ? (
+          <>
+            <p className="mt-2 text-sm text-ink">{pulse.data.social_weather} <span className="text-ink-faint">({pulse.data.resident_count} moradores em movimento)</span></p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {pulse.data.hot_locations.slice(0, 4).map((place) => (
+                <div key={place.location_id} className="rounded-xl bg-paper px-3 py-2">
+                  <p className="text-sm font-medium text-ink">{place.location_name}</p>
+                  <p className="text-xs text-ink-faint">{place.resident_count} morador(es)</p>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : <p className="mt-2 text-sm text-ink-faint">O pulso ainda não foi calculado.</p>}
+      </section>
+
+      <section className="mt-4 rounded-2xl border border-line bg-surface p-4">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Enquanto você estava fora</h2>
         {pulse.loading ? (
           <Spinner label="Reconstruindo o que aconteceu" />
