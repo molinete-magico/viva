@@ -552,9 +552,117 @@ def location_loyalty(session: Session, moment: datetime) -> tuple[int, list[str]
     if actions: session.commit()
     return actions, []
 
-def run_city_life(session: Session, moment: datetime) -> dict:
+def _run_city_life_previous(session: Session, moment: datetime) -> dict:
     result = _run_city_life_base(session, moment)
     extra = [reciprocity(session, moment), dormant_ties(session, moment), tension_spillover(session, moment), location_loyalty(session, moment)]
     result["second_order"] = sum(item[0] for item in extra)
     result["highlights"] = (result["highlights"] + [h for _, hs in extra for h in hs])[:28]
+    return result
+
+def reputation_discovery(session: Session, moment: datetime) -> tuple[int, list[str]]:
+    """Visibilidade alta cria descoberta orgânica sem forçar follow."""
+    npcs = session.exec(select(Character).where(Character.is_npc.is_(True))).all()
+    actions, highlights = 0, []
+    for popular in npcs:
+        if popular.id is None or popular.discovered_level < 6:
+            continue
+        followers = session.exec(select(Follow).where(Follow.followed_character_id == popular.id)).all()
+        candidates = [n for n in npcs if n.id != popular.id and not any(f.follower_character_id == n.id for f in followers)]
+        for viewer in candidates[:4]:
+            marker = key("reputation-discovery", popular.id, viewer.id, moment.date())
+            if already(session, viewer.id, marker) or score(f"discover-popular:{popular.id}:{viewer.id}:{moment.date()}") > 0.08:
+                continue
+            rel.apply_changes(session, viewer.id, popular.id, {"familiarity": 1}, log=False)
+            remember(session, viewer, popular, f"Comecei a prestar atenção em {popular.name}, que parece estar ficando conhecido.", "reputation_discovery", marker, moment, 23)
+            actions += 1
+            highlights.append(f"{viewer.name} descobriu {popular.name}")
+            break
+    return actions, highlights[:6]
+
+
+def event_social_echo(session: Session, moment: datetime) -> tuple[int, list[str]]:
+    """Eventos concluídos podem virar conversa pública no feed."""
+    events = session.exec(select(Event).where(Event.status == "COMPLETED", Event.scheduled_at >= moment - timedelta(hours=6), Event.scheduled_at <= moment).limit(8)).all()
+    actions, highlights = 0, []
+    for event in events:
+        host = session.get(Character, event.host_character_id) if event.host_character_id else None
+        if host is None or host.id is None:
+            continue
+        marker = key("event-echo", event.id)
+        if already(session, host.id, marker):
+            continue
+        session.add(Post(
+            author_character_id=host.id,
+            content=f"Foi bom encontrar gente em {event.title}.",
+            kind="event",
+            location_id=event.location_id,
+            event_id=event.id,
+            created_at=moment,
+        ))
+        session.commit()
+        remember(session, host, None, f"Compartilhei um pequeno eco de {event.title} no feed.", "event_social_echo", marker, moment, 22)
+        actions += 1
+        highlights.append(f"{host.name} comentou sobre {event.title}")
+    return actions, highlights[:6]
+
+
+def fresh_social_connections(session: Session, moment: datetime) -> tuple[int, list[str]]:
+    """Moradores sem vínculo podem iniciar uma relação quando a convivência se repete."""
+    npcs = session.exec(select(Character).where(Character.is_npc.is_(True))).all()
+    actions, highlights = 0, []
+    for left in npcs:
+        if left.id is None or left.current_location_id is None:
+            continue
+        candidates = [x for x in npcs if x.id != left.id and x.current_location_id == left.current_location_id]
+        candidates.sort(key=lambda x: _compatibility(left, x, _relationship(session, left, x)), reverse=True)
+        for right in candidates[:2]:
+            if right.id is None or _relationship(session, left, right) is not None:
+                continue
+            marker = key("fresh-connection", left.id, right.id, moment.date())
+            if already(session, left.id, marker) or score(f"fresh:{left.id}:{right.id}:{moment.date()}") > 0.22:
+                continue
+            rel.apply_changes(session, left.id, right.id, {"familiarity": 1}, log=False)
+            remember(session, left, right, f"Comecei a conhecer {right.name} depois de encontrá-lo várias vezes.", "fresh_connection", marker, moment, 30)
+            remember(session, right, left, f"Comecei a conhecer {left.name} depois de encontrá-lo várias vezes.", "fresh_connection", marker+"-r", moment, 30)
+            actions += 1
+            highlights.append(f"{left.name} começou a conhecer {right.name}")
+            break
+    return actions, highlights[:6]
+
+
+def location_activity_affinity(session: Session, moment: datetime) -> tuple[int, list[str]]:
+    """Atividades de um local reforçam afinidades quando combinam com hobbies do NPC."""
+    actions, highlights = 0, []
+    for npc in session.exec(select(Character).where(Character.is_npc.is_(True))).all():
+        if npc.id is None or npc.current_location_id is None:
+            continue
+        location = session.get(Location, npc.current_location_id)
+        if location is None or not location.activities:
+            continue
+        interests = {str(x).lower() for x in (npc.hobbies or []) + (npc.likes or [])}
+        matching = [str(x) for x in location.activities if str(x).lower() in interests]
+        if not matching:
+            continue
+        marker = key("activity-affinity", npc.id, location.id, moment.date())
+        if already(session, npc.id, marker):
+            continue
+        remember(session, npc, None, f"Em {location.name}, encontrei uma atividade que combina comigo: {matching[0]}.", "activity_affinity", marker, moment, 24)
+        actions += 1
+    return actions, highlights[:4]
+
+
+def run_city_life(session: Session, moment: datetime) -> dict:
+    result = _run_city_life_base(session, moment)
+    extra = [
+        reciprocity(session, moment),
+        dormant_ties(session, moment),
+        tension_spillover(session, moment),
+        location_loyalty(session, moment),
+        reputation_discovery(session, moment),
+        event_social_echo(session, moment),
+        fresh_social_connections(session, moment),
+        location_activity_affinity(session, moment),
+    ]
+    result["second_order"] = sum(item[0] for item in extra)
+    result["highlights"] = (result["highlights"] + [h for _, hs in extra for h in hs])[:32]
     return result
