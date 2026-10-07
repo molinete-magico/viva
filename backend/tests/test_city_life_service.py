@@ -29,3 +29,8 @@ def test_city_life_second_order_functions_are_available():
     assert callable(memory_consolidation)
     assert callable(social_group_formation)
     assert callable(social_spending)
+
+
+def test_city_life_has_spontaneous_group_activity():
+    from app.services.city_life_service import spontaneous_group_activity
+    assert callable(spontaneous_group_activity)
