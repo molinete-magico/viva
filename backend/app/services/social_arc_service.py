@@ -324,3 +324,144 @@ def apply_engagement_consequences(
         dedupe_key=f"engagement-{post.id}-{actor.id}",
         occurred_at=moment,
     )
+
+
+def advance_social_intentions(
+    session: Session,
+    moment: datetime,
+) -> tuple[int, list[str]]:
+    """Transforma o arco atual em uma iniciativa social concreta.
+
+    Cada par recebe no máximo uma iniciativa por dia. As iniciativas são
+    deliberadamente pequenas: uma DM, um convite, uma tentativa de reconciliação
+    ou uma provocação pública. O efeito é persistente e pode alimentar a próxima
+    janela da simulação.
+    """
+    from app.services.messaging_service import send_npc_initiative
+
+    npcs = session.exec(select(Character).where(Character.is_npc.is_(True))).all()
+    players = session.exec(select(Character).where(Character.is_npc.is_(False))).all()
+    characters = {c.id: c for c in npcs + players if c.id is not None}
+    relationships = session.exec(select(Relationship)).all()
+    actions = 0
+    highlights: list[str] = []
+    day = moment.date().isoformat()
+
+    for relationship in relationships:
+        left = characters.get(relationship.character_a_id)
+        right = characters.get(relationship.character_b_id)
+        if left is None or right is None:
+            continue
+
+        arc = relationship_arc(relationship)
+        if arc == "acquaintance":
+            continue
+
+        # Só NPCs tomam iniciativas autônomas. Se os dois são NPCs, a cidade
+        # continua se movendo sem depender do jogador.
+        actor = left if left.is_npc else right if right.is_npc else None
+        target = right if actor is left else left if actor is right else None
+        if actor is None or target is None or actor.id is None or target.id is None:
+            continue
+
+        key = f"social-intent-{actor.id}-{target.id}-{day}"
+        if session.exec(
+            select(Memory).where(
+                Memory.owner_character_id == actor.id,
+                Memory.dedupe_key == key,
+            )
+        ).first():
+            continue
+
+        # A pontuação é determinística para que catch-up repetido não produza
+        # comportamentos diferentes sem mudança no estado do mundo.
+        chance = {
+            "friendship": 0.58,
+            "romance": 0.72,
+            "rivalry": 0.48,
+            "strained": 0.42,
+            "budding_friendship": 0.34,
+        }.get(arc, 0.2)
+        if _score(f"intent:{actor.id}:{target.id}:{day}") > chance:
+            continue
+
+        message: str | None = None
+        kind = "social_intent"
+        changes: dict[str, int] = {}
+
+        if arc == "friendship":
+            hobby = (target.hobbies or actor.hobbies or ["dar uma volta"])[0]
+            message = f"Ei, {target.name}. Pensei em você hoje. Quer fazer alguma coisa juntos? Talvez algo envolvendo {hobby}."
+            changes = {"familiarity": 1, "friendship": 2, "trust": 1}
+        elif arc == "budding_friendship":
+            message = f"Oi, {target.name}! A gente tem se esbarrado bastante. Quer conversar qualquer hora?"
+            changes = {"familiarity": 2, "friendship": 1}
+        elif arc == "romance":
+            message = f"Você me veio à cabeça hoje, {target.name}. Quer me encontrar mais tarde?"
+            changes = {"familiarity": 1, "romance": 1}
+        elif arc == "strained":
+            message = f"Ei, {target.name}. Acho que as coisas ficaram estranhas entre a gente. Não quero deixar assim."
+            changes = {"familiarity": 1, "tension": -2, "trust": 1}
+            kind = "reconciliation_attempt"
+        elif arc == "rivalry":
+            # Rivalidade não precisa virar briga toda vez: uma provocação pública
+            # cria pressão social e deixa espaço para terceiros reagirem.
+            post = Post(
+                author_character_id=actor.id,
+                content=f"Tem gente que transforma qualquer conversa em competição. Cansativo.",
+                kind="post",
+                location_id=actor.current_location_id,
+                created_at=moment,
+            )
+            session.add(post)
+            session.commit()
+            rel.add_memory(
+                session,
+                owner_character_id=actor.id,
+                other_character_id=target.id,
+                content=f"Fiz uma provocação indireta pensando em {target.name}.",
+                kind="rivalry_action",
+                importance=36,
+                context={"arc": arc},
+                dedupe_key=key,
+                occurred_at=moment,
+            )
+            rel.apply_changes(session, actor.id, target.id, {"tension": 1, "respect": 1}, log=False)
+            actions += 1
+            if len(highlights) < 6:
+                highlights.append(f"{actor.name} provocou alguém em público")
+            continue
+
+        try:
+            send_npc_initiative(session, actor, target, message)
+        except Exception:
+            continue
+
+        rel.apply_changes(session, actor.id, target.id, changes, log=False)
+        rel.add_memory(
+            session,
+            owner_character_id=actor.id,
+            other_character_id=target.id,
+            content=f"Tomei uma iniciativa com {target.name}: {message}",
+            kind=kind,
+            importance=40 if arc != "romance" else 48,
+            context={"arc": arc, "world_time": moment.isoformat()},
+            dedupe_key=key,
+            occurred_at=moment,
+        )
+        rel.add_memory(
+            session,
+            owner_character_id=target.id,
+            other_character_id=actor.id,
+            content=f"{actor.name} tomou uma iniciativa comigo enquanto nossa relação estava em uma fase de {arc.replace('_', ' ')}.",
+            kind="received_social_intent",
+            importance=34,
+            context={"arc": arc, "world_time": moment.isoformat()},
+            dedupe_key=f"{key}-received",
+            occurred_at=moment,
+        )
+        actions += 1
+        if len(highlights) < 6:
+            highlights.append(f"{actor.name} tomou uma iniciativa com {target.name} ({arc.replace('_', ' ')})")
+
+    return actions, highlights
