@@ -191,6 +191,19 @@ def resolve_ambient_events(session: Session, moment: datetime) -> tuple[int, lis
                     participant.status = "ACCEPTED"
                     participant.responded_at = moment
                     session.add(participant)
+                else:
+                    participant.status = "DECLINED"
+                    participant.responded_at = moment
+                    session.add(participant)
+                    if character.id is not None:
+                        _remember(
+                            session, character, session.get(Character, event.host_character_id) if event.host_character_id else None,
+                            f"Recusei o convite para {event.title}.",
+                            kind="event_decline",
+                            key=f"event-decline-{event.id}-{character.id}",
+                            moment=moment,
+                            importance=20,
+                        )
             if participant.status in ("ACCEPTED", "JOINED"):
                 participant.status = "JOINED"
                 participant.joined_at = participant.joined_at or moment
