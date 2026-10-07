@@ -70,139 +70,71 @@ export function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 lg:px-0">
-      <div className="viva-panel overflow-hidden rounded-3xl border border-line bg-surface">
+      <section className="viva-panel overflow-hidden rounded-3xl border border-line bg-surface">
         <div className="viva-profile-cover viva-grid-noise h-28 sm:h-36" />
-        <div className="relative px-5 pb-5 sm:px-7">
+        <div className="relative px-5 pb-6 sm:px-7">
           <div className="-mt-10 flex items-end justify-between gap-4">
-            <Avatar name={person.name} size="lg" photoUrl={person.photo_url} />
-            {!person.is_me && ownCharacter && <div className="flex gap-2">
-              <button type="button" onClick={toggleFollow} disabled={followBusy} className={`tap rounded-full border px-5 text-sm font-bold transition disabled:opacity-50 ${person.is_following ? 'border-line bg-surface text-ink hover:border-accent/40' : 'border-accent bg-accent text-white hover:bg-accent-deep'}`}>
-                {followBusy ? '…' : person.is_following ? 'Seguindo' : 'Seguir'}
-              </button>
-              {person.is_npc && <button type="button" onClick={startDm} disabled={dmBusy} className="tap rounded-full border border-line bg-surface px-4 text-sm font-bold text-ink transition hover:border-accent/40 disabled:opacity-50" aria-label="Conversar">Mensagem</button>}
-            </div>}
+            <div className="viva-avatar rounded-full">
+              <Avatar name={person.name} size="lg" photoUrl={person.photo_url} />
+            </div>
+            {!person.is_me && ownCharacter && (
+              <div className="flex gap-2">
+                <button type="button" onClick={toggleFollow} disabled={followBusy} className={`tap rounded-full border px-5 text-sm font-bold transition disabled:opacity-50 ${person.is_following ? 'border-line bg-surface text-ink hover:border-accent/40' : 'border-accent bg-accent text-white hover:bg-accent-deep'}`}>
+                  {followBusy ? '…' : person.is_following ? 'Seguindo' : 'Seguir'}
+                </button>
+                {person.is_npc && (
+                  <button type="button" onClick={startDm} disabled={dmBusy} className="tap rounded-full border border-line bg-surface px-4 text-sm font-bold text-ink transition hover:border-accent/40 disabled:opacity-50">
+                    {dmBusy ? 'Abrindo…' : 'Mensagem'}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-          <div className="mt-3">
+          <div className="mt-4">
             <p className="viva-kicker text-accent">{person.is_npc ? 'Morador da cidade' : 'Perfil'}</p>
             <h1 className="mt-1 font-display text-3xl font-black tracking-tight text-ink">{person.name}</h1>
-            <p className="mt-1 text-sm text-ink-soft">@{person.name.toLowerCase().replace(/\\s+/g, '_')} · {person.profession_label || 'morador'}{person.pronouns ? ` · ${person.pronouns}` : ''}</p>
-          </div>
-          <Avatar name={person.name} size="lg" photoUrl={person.photo_url} />
-          <div className="min-w-0">
-            <h1 className="truncate font-display text-2xl font-semibold text-ink">{person.name}</h1>
-            <p className="text-sm text-ink-soft">
-              {person.profession_label || 'morador'}
-              {person.pronouns ? ` · ${person.pronouns}` : ''} · {person.age} anos
+            <p className="mt-1 text-sm text-ink-soft">
+              {person.profession_label || 'morador'}{person.pronouns ? ` · ${person.pronouns}` : ''} · {person.age} anos
             </p>
             {person.is_npc && (
-              <p className="mt-1 inline-flex rounded-full bg-sea-soft px-2.5 py-0.5 text-[11px] font-medium text-sea">
+              <p className="mt-2 inline-flex rounded-full bg-sea-soft px-2.5 py-1 text-[11px] font-medium text-sea">
                 {LEVEL_LABELS[person.discovered_level] ?? 'rosto novo na cidade'}
               </p>
             )}
           </div>
+          {person.bio && <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink">{person.bio}</p>}
+          <dl className="mt-5 grid grid-cols-3 border-y border-line py-4">
+            <div><dt className="text-xs text-ink-soft">Posts</dt><dd className="mt-1 text-lg font-bold text-ink">{person.stats.posts}</dd></div>
+            <div><dt className="text-xs text-ink-soft">Seguidores</dt><dd className="mt-1 text-lg font-bold text-ink">{person.stats.followers}</dd></div>
+            <div><dt className="text-xs text-ink-soft">Seguindo</dt><dd className="mt-1 text-lg font-bold text-ink">{person.stats.following}</dd></div>
+          </dl>
         </div>
-
-        {person.bio && <p className="mt-4 text-[15px] leading-relaxed text-ink">{person.bio}</p>}
-
-        <dl className="mt-5 grid grid-cols-3 border-y border-line py-4 text-left">
-          <div className="px-2 py-1">
-            <dt className="text-xs text-ink-soft">Posts</dt>
-            <dd className="text-lg font-semibold text-ink">{person.stats.posts}</dd>
-          </div>
-          <div className="rounded-xl bg-paper px-2 py-3">
-            <dt className="text-xs text-ink-soft">Seguidores</dt>
-            <dd className="text-lg font-semibold text-ink">{person.stats.followers}</dd>
-          </div>
-          <div className="rounded-xl bg-paper px-2 py-3">
-            <dt className="text-xs text-ink-soft">Seguindo</dt>
-            <dd className="text-lg font-semibold text-ink">{person.stats.following}</dd>
-          </div>
-        </dl>
-
-        {person.is_me && person.money !== null && (
-          <p className="mt-4 rounded-xl bg-sea-soft px-4 py-3 text-sm text-sea">
-            No bolso: <strong>R$ {person.money.toFixed(2).replace('.', ',')}</strong>
-          </p>
-        )}
-      </div>
+      </section>
 
       {person.is_me && (
         <div className="mt-4 space-y-3">
           {person.hobbies.length > 0 && (
             <div className="rounded-2xl border border-line bg-surface p-4">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Seus interesses</h2>
-              <ul className="mt-2 flex flex-wrap gap-2">
-                {person.hobbies.map((hobby) => (
-                  <li key={hobby} className="rounded-full bg-accent-soft px-3 py-1 text-xs text-accent-deep">
-                    {hobby}
-                  </li>
-                ))}
+              <h2 className="viva-kicker text-ink-soft">Seus interesses</h2>
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {person.hobbies.map((hobby) => <li key={hobby} className="rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent-deep">{hobby}</li>)}
               </ul>
             </div>
           )}
-          <div className="flex flex-wrap gap-3">
-            <Link
-              to="/settings"
-              className="tap inline-flex items-center rounded-full border border-line bg-surface px-5 text-sm font-medium text-ink transition hover:border-ink/30"
-            >
-              Configurações
-            </Link>
-          </div>
+          {person.money !== null && <p className="rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink-soft">No bolso: <strong className="text-ink">R$ {person.money.toFixed(2).replace('.', ',')}</strong></p>}
+          <Link to="/settings" className="tap inline-flex items-center rounded-full border border-line bg-surface px-5 text-sm font-medium text-ink transition hover:border-accent/40">Configurações</Link>
         </div>
       )}
 
-      {!person.is_me && ownCharacter && false && (
-        <div className="mt-4 space-y-3">
-          <button
-            type="button"
-            onClick={toggleFollow}
-            disabled={followBusy}
-            className={`tap w-full rounded-full px-5 py-2.5 text-sm font-semibold transition disabled:opacity-50 ${
-              person.is_following
-                ? 'border border-line bg-surface text-ink hover:border-accent/40 hover:text-accent-deep'
-                : 'bg-accent text-white hover:bg-accent-deep'
-            }`}
-          >
-            {followBusy ? '…' : person.is_following ? 'Seguindo' : 'Seguir'}
-          </button>
-          {person.is_npc && (
-            <button
-              type="button"
-              onClick={startDm}
-              disabled={dmBusy}
-              className="tap w-full rounded-full border border-sea/40 bg-sea-soft px-5 py-2.5 text-sm font-semibold text-sea transition hover:border-sea hover:bg-sea/10 disabled:opacity-50"
-            >
-              {dmBusy ? 'Abrindo…' : 'Conversar'}
-            </button>
-          )}
-        </div>
-      )}
-
-      {!person.is_me && !ownCharacter && (
-        <p className="mt-4 text-center text-xs text-ink-faint">
-          Você ainda não conhece {person.name} direito. Isso muda com o tempo.
-        </p>
-      )}
-
-      <section className="mt-6">
+      <section className="mt-8">
         <h2 className="viva-kicker text-ink-soft">Publicações</h2>
-        {posts.loading ? (
-          <Spinner label="Carregando publicações" />
-        ) : posts.error ? (
-          <ErrorState message={posts.error} onRetry={posts.reload} />
-        ) : (posts.data?.items.length ?? 0) === 0 ? (
-          <p className="mt-3 rounded-2xl border border-line bg-surface px-4 py-6 text-center text-sm text-ink-faint">
-            {person.is_me ? 'Você ainda não publicou nada.' : `${person.name} ainda não publicou nada.`}
-          </p>
-        ) : (
-          <ul className="mt-3 space-y-3">
-            {posts.data?.items.map((post) => (
-              <li key={post.id}>
-                <PostCard post={post} currentCharacterId={ownCharacter?.id} onChanged={posts.reload} />
-              </li>
-            ))}
-          </ul>
-        )}
+        {posts.loading ? <Spinner label="Carregando publicações" /> :
+          posts.error ? <ErrorState message={posts.error} onRetry={posts.reload} /> :
+          (posts.data?.items.length ?? 0) === 0 ? (
+            <p className="mt-3 rounded-2xl border border-line bg-surface px-4 py-8 text-center text-sm text-ink-faint">{person.is_me ? 'Você ainda não publicou nada.' : `${person.name} ainda não publicou nada.`}</p>
+          ) : (
+            <ul className="mt-3 space-y-2">{posts.data?.items.map((post) => <li key={post.id}><PostCard post={post} currentCharacterId={ownCharacter?.id} onChanged={posts.reload} /></li>)}</ul>
+          )}
       </section>
     </div>
   )
