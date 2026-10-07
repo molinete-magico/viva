@@ -25,11 +25,11 @@ def _combine(state: WorldState) -> datetime:
     return datetime.combine(state.current_date, time.fromisoformat(state.current_time), tzinfo=timezone.utc)
 
 
-def process_due_future_hooks(session: Session) -> list[str]:
+def process_due_future_hooks(session: Session, *, simulated_now: datetime | None = None) -> list[str]:
     """Entrega consequências sociais que amadureceram enquanto o app estava fechado."""
     from app.services.messaging_service import send_npc_initiative
 
-    now = utcnow()
+    now = simulated_now or utcnow()
     hooks = session.exec(
         select(FutureHook).where(
             FutureHook.status == "PENDING",
@@ -82,7 +82,7 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
     check_open_events(session, until_dt)
     stale_sessions = recover_stale_event_sessions(session)
     idle_sessions = idle_conversation_sessions(session)
-    future_social = process_due_future_hooks(session)
+    future_social = process_due_future_hooks(session, simulated_now=until_dt)
 
     social: list[str] = []
     if with_social:
