@@ -126,3 +126,4 @@
 .viva-profile-cover { background: linear-gradient(135deg, color-mix(in srgb, var(--viva-accent) 26%, var(--viva-paper)), color-mix(in srgb, var(--viva-ink) 8%, var(--viva-paper)) 55%, var(--viva-paper)); }
 .viva-grid-noise { position: relative; overflow: hidden; }
 .viva-grid-noise::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .22; background-image: linear-gradient(var(--viva-line) 1px, transparent 1px), linear-gradient(90deg, var(--viva-line) 1px, transparent 1px); background-size: 28px 28px; mask-image: linear-gradient(to bottom, black, transparent 75%); }
+.field{width:100%;border:1px solid var(--line);border-radius:.75rem;background:var(--paper);padding:.6rem .75rem;font-size:.875rem;color:var(--ink);outline:none}.field:focus{border-color:var(--accent)}
