@@ -32,6 +32,11 @@ def _load_event(session: Session, event_id: int) -> Event:
     event = session.get(Event, event_id)
     if event is None:
         raise ServiceError("Evento não encontrado.", 404)
+    if event.status == "SCHEDULED":
+        event.status = de.EVENT_OPEN
+        session.add(event)
+        session.commit()
+        session.refresh(event)
     return event
 
 
@@ -219,7 +224,7 @@ def cancel_event(session: Session, actor: Character, event_id: int, reason: str)
 
 
 def _assert_playable(session: Session, character: Character, event: Event) -> EventParticipant:
-    if event.status not in (de.EVENT_SCHEDULED, de.EVENT_OPEN, de.EVENT_ACTIVE):
+    if event.status not in (de.EVENT_OPEN, de.EVENT_ACTIVE):
         raise ServiceError("Este evento não está disponível agora.", 409)
     participant = _participant(session, event.id, character.id)
     if participant is None or participant.status not in (
@@ -277,7 +282,7 @@ def start_or_resume_session(session: Session, character: Character, event_id: in
     participant.joined_at = utcnow()
     session.add(participant)
     event_session = EventSession(event_id=event.id, player_character_id=character.id)
-    if event.status not in (de.EVENT_ACTIVE,):
+    if event.status != de.EVENT_ACTIVE:
         event.status = de.transition_event(event.status, "start")
     session.add(event_session)
     session.add(event)
