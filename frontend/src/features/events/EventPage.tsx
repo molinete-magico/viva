@@ -26,7 +26,7 @@ export function EventPage() {
   const [error, setError] = useState('')
   const event = useFetch<EventDetail>(`/events/${eventId}`, [eventId])
 
-  if (event.loading) return <Spinner label="Abrindo o evento" />
+  if (event.loading) return <Spinner label="Abrindo a situação" />
   if (event.error) return <ErrorState message={event.error} onRetry={event.reload} />
   if (!event.data) return null
 
@@ -77,7 +77,7 @@ export function EventPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-5">
       <Link to="/events" className="text-xs font-medium text-accent-deep transition hover:underline">
-        ‹ Voltar às atividades
+        ‹ Voltar às situações
       </Link>
 
       {error && <div className="mt-3"><WarningBanner message={error} onClose={() => setError('')} /></div>}
@@ -90,7 +90,7 @@ export function EventPage() {
           </span>
         </div>
         <p className="mt-2 text-sm text-ink-soft">
-          Situação aberta · participe quando quiser
+          Uma situação em aberto · entre quando fizer sentido
         </p>
         {data.description && <p className="mt-3 text-sm leading-relaxed text-ink-soft">{data.description}</p>}
         {data.cancel_reason && (
@@ -105,7 +105,7 @@ export function EventPage() {
               onClick={() => rsvp(true)}
               className="tap rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
             >
-              Confirmar presença
+              Vou nessa
             </button>
           )}
           {open && (
@@ -115,7 +115,7 @@ export function EventPage() {
               onClick={enter}
               className="tap rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
             >
-              Entrar na cena
+              Entrar na situação
             </button>
           )}
           {open && data.my_status === 'ACCEPTED' && (
@@ -125,7 +125,7 @@ export function EventPage() {
               onClick={() => rsvp(false)}
               className="tap rounded-full border border-line bg-paper px-4 py-2 text-sm font-medium text-ink-soft transition hover:border-accent/40"
             >
-              Recusar
+              Agora não
             </button>
           )}
           {isHost && open && (
@@ -135,7 +135,7 @@ export function EventPage() {
               onClick={cancelEvent}
               className="tap rounded-full border border-line bg-paper px-4 py-2 text-sm font-medium text-ink-soft transition hover:border-warn/40"
             >
-              Cancelar atividade
+              Cancelar situação
             </button>
           )}
         </div>
@@ -143,7 +143,7 @@ export function EventPage() {
 
       <section className="mt-4 rounded-3xl border border-line bg-surface p-5">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
-          Quem está na cena · {data.participant_count}
+          Quem está aqui · {data.participant_count}
         </h2>
         {data.participants.length === 0 ? (
           <p className="mt-2 text-sm text-ink-faint">Ninguém por aqui ainda.</p>
