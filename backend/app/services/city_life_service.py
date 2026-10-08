@@ -588,7 +588,7 @@ def reputation_discovery(session: Session, moment: datetime) -> tuple[int, list[
 
 def event_social_echo(session: Session, moment: datetime) -> tuple[int, list[str]]:
     """Eventos concluídos podem virar conversa pública no feed."""
-    events = session.exec(select(Event).where(Event.status == "COMPLETED", Event.scheduled_at >= moment - timedelta(hours=6), Event.scheduled_at <= moment).limit(8)).all()
+    events = session.exec(select(Event).where(Event.status == "COMPLETED", Event.created_at >= moment - timedelta(hours=6), Event.created_at <= moment).limit(8)).all()
     actions, highlights = 0, []
     for event in events:
         host = session.get(Character, event.host_character_id) if event.host_character_id else None
@@ -720,7 +720,7 @@ def spontaneous_group_activity(session: Session, moment: datetime) -> tuple[int,
         title = f"Encontro espontâneo em {location.name if location else 'um lugar conhecido'}"
         event = Event(
             title=title,
-            description="Um pequeno grupo resolveu transformar a convivência de hoje em um encontro.",
+            description="Um pequeno grupo resolveu transformar a convivência em um encontro. Quem aparecer pode entrar na cena.",
             location_id=location_id,
             host_character_id=host.id,
             created_by="system",
