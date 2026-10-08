@@ -67,7 +67,7 @@ export function EventsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-5">
+    <div className="mx-auto max-w-2xl">
       <div className="flex items-center justify-between gap-2">
         <h1 className="font-display text-xl font-semibold text-ink">Atividades</h1>
         <div className="flex gap-2">
@@ -94,7 +94,7 @@ export function EventsPage() {
 
       {showCreate && (
         <form
-          className="mt-4 space-y-3 rounded-2xl border border-line bg-surface p-4"
+          className="mt-4 space-y-3 border-y border-line bg-transparent p-4"
           onSubmit={(e) => {
             e.preventDefault()
             createEvent()
@@ -152,11 +152,11 @@ export function EventsPage() {
             <li key={event.id}>
               <Link
                 to={`/events/${event.id}`}
-                className="block rounded-2xl border border-line bg-surface p-4 transition hover:border-accent/40"
+                className="block border-b border-line bg-transparent px-4 py-5 transition hover:bg-surface"
               >
                 <div className="flex items-start justify-between gap-3">
                   <h2 className="text-base font-semibold text-ink">{event.title}</h2>
-                  <span className="shrink-0 rounded-full bg-sea-soft px-2.5 py-1 text-[11px] font-medium text-sea">
+                  <span className="shrink-0 text-[11px] font-medium uppercase tracking-wide text-sea">
                     {STATUS_LABELS[event.status] ?? event.status}
                   </span>
                 </div>
