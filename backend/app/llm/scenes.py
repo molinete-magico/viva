@@ -22,22 +22,57 @@ FALLBACK_ACTIONS = [
 
 
 def _fallback_scene(*, event_title: str, event_description: str, participants: list[str], player_name: str, turn_index: int, last_action: str | None = None, free_text_action: str | None = None) -> dict[str, Any]:
+    """Fallback contextualizado quando o LLM não consegue produzir uma cena válida."""
     people = [p for p in participants if p and p != player_name]
     subject = people[0] if people else None
     detail = event_description.strip() or event_title
+    action = (free_text_action or last_action or "").strip()
+    lower = action.lower()
+
     if turn_index == 0:
         narrative = f"{detail}. {subject} está com você na situação." if subject else f"{detail}. A situação começa sem outro participante identificado."
-    else:
-        if subject:
-            narrative = f"{subject} reage ao que aconteceu e mantém a conversa em andamento."
+        line = "Oi." if subject else None
+    elif subject:
+        if any(word in lower for word in ("como você está", "tudo de boa", "e aí", "oi", "opa")):
+            narrative = f"{subject} reconhece a chegada e entra no papo, sem interromper o que vocês vieram fazer."
+            line = "Tô de boa. E você?"
+        elif any(word in lower for word in ("o que", "qual", "quer escutar", "vamos ouvir", "vamos colocar", "vinil", "disco")):
+            narrative = f"{subject} olha para os discos e começa a pensar no que faz sentido colocar primeiro."
+            line = "Tava pensando em colocar um dos que eu separei aqui. Quer escolher?"
+        elif any(word in lower for word in ("só uhum", "fala alguma coisa", "responde", "conversa")):
+            narrative = f"{subject} percebe que respondeu curto demais e finalmente desenvolve a resposta."
+            line = "Foi mal. Tô meio desligado hoje. Quer escolher um disco?"
         else:
-            narrative = "A situação continua a partir do que aconteceu na rodada anterior."
-    dialogue = [{"speaker": subject, "line": "Oi." if turn_index == 0 else "Uhum."}] if subject else []
+            narrative = f"{subject} acompanha o que você disse e responde de um jeito próprio, mantendo o assunto da cena."
+            line = "Pode ser. Me diz o que você quer fazer."
+    else:
+        narrative = "A situação continua a partir do que aconteceu na rodada anterior."
+        line = None
+
+    dialogue = [{"speaker": subject, "line": line}] if subject and line else []
     return {
         "narrative": narrative[:8000],
         "dialogue": dialogue,
         "actions": [dict(action) for action in FALLBACK_ACTIONS],
     }
+
+
+def _dialogue_is_usable(dialogue: Any, participants: list[str], player_name: str) -> bool:
+    if not isinstance(dialogue, list):
+        return False
+    allowed = {p.strip().casefold() for p in participants if p and p.strip() and p != player_name}
+    for item in dialogue[:3]:
+        if not isinstance(item, dict):
+            return False
+        speaker = str(item.get("speaker", "")).strip()
+        line = str(item.get("line", "")).strip()
+        if not speaker or not line:
+            return False
+        if speaker.casefold() not in allowed:
+            return False
+        if line.casefold() in {"uhum", "hum", "hmm", "oi", "ok", "tá", "ta", "sim"}:
+            return False
+    return True
 
 def _extract_json(text: str) -> dict | None:
     match = re.search(r"\{.*\}", text, re.DOTALL)
@@ -178,7 +213,7 @@ async def generate_scene(
     dialogue = data.get("dialogue") if isinstance(data.get("dialogue"), list) else []
     actions = data.get("actions") if isinstance(data.get("actions"), list) else []
     actions = [a for a in actions if isinstance(a, dict) and a.get("id") and a.get("label")][:5]
-    if not narrative or not actions:
+    if not narrative or not actions or not _dialogue_is_usable(dialogue, participants, player_name):
         return _fallback_scene(
             event_title=event_title,
             event_description=event_description,
