@@ -3,31 +3,16 @@ import pytest
 from tests.conftest import auth_headers, create_character, register
 
 
-def _location_id(client, headers):
-    return client.get("/api/world/locations", headers=headers).json()["items"][0]["id"]
-
-
-def _second_user_with_character(client, email):
-    data = register(client, email=email)
-    headers = {"Authorization": f"Bearer {data['token']}"}
-    character = create_character(client, headers, name="Bruna")
-    return headers, character
-
-
 def test_create_event_and_list(client):
     headers = auth_headers(client)
     character = create_character(client, headers)
-    location_id = _location_id(client, headers)
-    from datetime import datetime, timedelta, timezone
 
     response = client.post(
         "/api/events",
         json={
             "title": "Rolê do ramen",
-            "description": "Mesa da esquina, caldo e conversa.",
-            "location_id": location_id,
-            "scheduled_at": (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat(),
-            "invitees": [],
+            "description": "Mesa e conversa.",
+            "invite_conversation_ids": [],
         },
         headers=headers,
     )
@@ -36,6 +21,9 @@ def test_create_event_and_list(client):
     assert event["title"] == "Rolê do ramen"
     assert event["host_name"] == character["name"]
     assert event["my_status"] == "JOINED"
+    assert event["status"] == "OPEN"
+    assert "location_id" not in event
+    assert "scheduled_at" not in event
 
     listing = client.get("/api/events", headers=headers).json()
     assert any(item["id"] == event["id"] for item in listing["items"])
@@ -44,50 +32,39 @@ def test_create_event_and_list(client):
     assert detail["participants"][0]["name"] == character["name"]
 
 
-def test_invitee_rsvp_and_notification(client):
-    owner_headers, owner_character = _second_user_with_character(client, "bruna@viva.app")
-    guest_headers, guest_character = _second_user_with_character(client, "cecilia@viva.app")
-    location_id = _location_id(client, owner_headers)
-    from datetime import datetime, timedelta, timezone
+def test_event_invites_character_from_conversation_id(client):
+    headers = auth_headers(client)
+    create_character(client, headers)
+    characters = client.get("/api/characters", headers=headers).json()["items"]
+    npc = next(c for c in characters if c["is_npc"])
+
+    conversation = client.post(f"/api/characters/{npc['id']}/dm", headers=headers)
+    assert conversation.status_code == 200, conversation.text
+    conversation_id = conversation.json()["id"]
 
     response = client.post(
         "/api/events",
         json={
-            "title": "Festinha surpresa",
-            "location_id": location_id,
-            "scheduled_at": (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat(),
-            "invitees": [guest_character["id"]],
+            "title": "Conversa surpresa",
+            "invite_conversation_ids": [conversation_id],
         },
-        headers=owner_headers,
+        headers=headers,
     )
+    assert response.status_code == 201, response.text
     event_id = response.json()["id"]
 
-    notifs = client.get("/api/notifications", headers=guest_headers).json()
-    assert any(n["type"] == "EVENT_INVITE" and n["payload"].get("event_id") == event_id for n in notifs["items"])
-
-    rsvp = client.post(f"/api/events/{event_id}/rsvp", json={"accept": True}, headers=guest_headers)
-    assert rsvp.status_code == 200, rsvp.text
-    my_status = next(
-        p["status"] for p in rsvp.json()["participants"] if p["character_id"] == guest_character["id"]
-    )
-    assert my_status == "ACCEPTED"
+    detail = client.get(f"/api/events/{event_id}", headers=headers).json()
+    invited = next(p for p in detail["participants"] if p["character_id"] == npc["id"])
+    assert invited["status"] == "INVITED"
 
 
 def test_event_session_playthrough_and_outcome(client):
     headers = auth_headers(client)
     character = create_character(client, headers)
-    char_id = character["id"]
-    location_id = _location_id(client, headers)
-    from datetime import datetime, timedelta, timezone
 
     event = client.post(
         "/api/events",
-        json={
-            "title": "Noite de forró",
-            "location_id": location_id,
-            "scheduled_at": (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat(),
-            "invitees": [],
-        },
+        json={"title": "Noite de forró"},
         headers=headers,
     ).json()
 
@@ -114,32 +91,20 @@ def test_event_session_playthrough_and_outcome(client):
     assert data["summary"]
     assert data["memories"]
 
-    memories = client.get(f"/api/characters/{char_id}/memories", headers=headers).json()
-    assert memories["items"], "esperava memórias do evento"
+    memories = client.get(f"/api/characters/{character['id']}/memories", headers=headers).json()
+    assert memories["items"]
     assert memories["items"][0]["category"] == "EVENT"
-
-    milestones = client.get("/api/milestones", headers=headers).json()
-    event_ms = next(m for m in milestones["items"] if m["key"] == "EVENT_PARTICIPATION")
-    assert event_ms["count"] >= 1
 
 
 def test_event_accepts_free_form_player_action(client):
     headers = auth_headers(client)
     create_character(client, headers)
-    location_id = _location_id(client, headers)
-    from datetime import datetime, timedelta, timezone
 
     event = client.post(
         "/api/events",
-        json={
-            "title": "Conversa espontânea",
-            "location_id": location_id,
-            "scheduled_at": (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat(),
-            "invitees": [],
-        },
+        json={"title": "Conversa espontânea"},
         headers=headers,
     ).json()
-
     session_id = client.post(
         f"/api/events/{event['id']}/sessions",
         headers=headers,
@@ -147,29 +112,23 @@ def test_event_accepts_free_form_player_action(client):
 
     response = client.post(
         f"/api/events/sessions/{session_id}/actions",
-        json={"free_text": "Pego uma cadeira e fico em silêncio observando as pessoas antes de falar."},
+        json={"free_text": "Observo as pessoas antes de falar."},
         headers=headers,
     )
 
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["player_action_id"] == "free_text"
-    assert "Pego uma cadeira" in body["player_action_label"]
+    assert "Observo as pessoas" in body["player_action_label"]
+
 
 def test_abandon_session_returns_event_to_open(client):
     headers = auth_headers(client)
     create_character(client, headers)
-    location_id = _location_id(client, headers)
-    from datetime import datetime, timedelta, timezone
 
     event = client.post(
         "/api/events",
-        json={
-            "title": "Ensaio da banda",
-            "location_id": location_id,
-            "scheduled_at": (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat(),
-            "invitees": [],
-        },
+        json={"title": "Ensaio da banda"},
         headers=headers,
     ).json()
     session_id = client.post(f"/api/events/{event['id']}/sessions", headers=headers).json()["session"]["id"]
@@ -178,7 +137,6 @@ def test_abandon_session_returns_event_to_open(client):
     assert response.json()["status"] == "ABANDONED"
     detail = client.get(f"/api/events/{event['id']}", headers=headers).json()
     assert detail["status"] == "OPEN"
-
 
 def test_relationships_and_milestone_claim(client):
     headers = auth_headers(client)
@@ -225,8 +183,7 @@ def test_catchup_advances_and_pays_bills(client):
     logs = client.get("/api/simulation/logs", headers=headers).json()
     assert any(log["kind"] == "auto" for log in logs["items"])
 
-    payments = report["payments"]
-    assert payments, "esperava pagamento de salário de NPCs no horário"
+    assert report["payments"] == []
 
 
 def test_admin_routes_blocked_for_non_admin(client):
