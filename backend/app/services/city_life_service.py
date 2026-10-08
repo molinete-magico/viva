@@ -743,30 +743,6 @@ def spontaneous_group_activity(session: Session, moment: datetime) -> tuple[int,
     return actions, highlights[:5]
 
 
-def social_spending(session: Session, moment: datetime) -> tuple[int, list[str]]:
-    """Pequenos gastos em convivência tornam a economia parte da vida social."""
-    npcs = session.exec(select(Character).where(Character.is_npc.is_(True))).all()
-    actions, highlights = 0, []
-    for npc in npcs:
-        if npc.id is None or npc.money is None or npc.money < 8:
-            continue
-        sociability, _ = _social_personality(npc)
-        marker = key("social-spending", npc.id, moment.date())
-        if already(session, npc.id, marker) or sociability < 0.65:
-            continue
-        amount = round(min(npc.money * 0.04, 12.0), 2)
-        if amount < 1 or score(f"spend:{npc.id}:{moment.date()}") > 0.18:
-            continue
-        npc.money = round(npc.money - amount, 2)
-        session.add(npc)
-        remember(session, npc, None, f"Gastei R$ {amount:.2f} em um pequeno momento social.", "social_spending", marker, moment, 15)
-        actions += 1
-        highlights.append(f"{npc.name} teve um pequeno gasto social")
-    if actions:
-        session.commit()
-    return actions, highlights[:6]
-
-
 def memory_consolidation(session: Session, moment: datetime) -> tuple[int, list[str]]:
     """Memórias repetidas são resumidas em uma lembrança mais importante, sem nova tabela."""
     npcs = session.exec(select(Character).where(Character.is_npc.is_(True))).all()
@@ -815,7 +791,6 @@ def run_city_life(session: Session, moment: datetime) -> dict:
         location_activity_affinity(session, moment),
         social_group_formation(session, moment),
         spontaneous_group_activity(session, moment),
-        social_spending(session, moment),
         memory_consolidation(session, moment),
     ]
     result["second_order"] = sum(item[0] for item in extra)
