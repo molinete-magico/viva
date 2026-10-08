@@ -21,26 +21,24 @@ FALLBACK_ACTIONS = [
 ]
 
 
-def _fallback_scene(*, event_title: str, participants: list[str], player_name: str, turn_index: int) -> dict[str, Any]:
-    people = ", ".join(p for p in participants if p and p != player_name) or "os presentes"
+def _fallback_scene(*, event_title: str, event_description: str, participants: list[str], player_name: str, turn_index: int, last_action: str | None = None, free_text_action: str | None = None) -> dict[str, Any]:
+    people = [p for p in participants if p and p != player_name and p != "os presentes"]
+    subject = people[0] if people else "a situação"
+    detail = event_description.strip() or event_title
     if turn_index == 0:
-        narrative = (
-            f"{event_title}. Você chega e sente o clima: gente conversando, risada baixa. "
-            f"{people} estão por perto e todo mundo parece esperar você fazer o primeiro movimento."
-        )
+        narrative = f"{detail}. {subject} está ali e a situação já está acontecendo; não há uma reação pronta esperando por você."
     else:
-        narrative = (
-            f"A cena segue em {event_title}. {people} continuam por ali; você percebe que suas "
-            "escolhas estão mudando aos poucos como as pessoas tratam você."
-        )
+        action = free_text_action or last_action
+        if action:
+            narrative = f"{subject} continua na situação. {subject} reage ao que você fez: {action}."
+        else:
+            narrative = f"{subject} continua na situação. A conversa segue sem transformar o momento em algo maior do que ele é."
+    dialogue = [{"speaker": subject, "line": "E aí?" if turn_index == 0 else "Tá."}] if people else []
     return {
-        "narrative": narrative,
-        "dialogue": [
-            {"speaker": people.split(", ")[0], "line": "A vida anda sempre por aqui, hein."}
-        ],
+        "narrative": narrative[:8000],
+        "dialogue": dialogue,
         "actions": [dict(action) for action in FALLBACK_ACTIONS],
     }
-
 
 def _extract_json(text: str) -> dict | None:
     match = re.search(r"\{.*\}", text, re.DOTALL)
@@ -58,8 +56,10 @@ def _extract_json(text: str) -> dict | None:
 def build_scene_prompt(
     *,
     event_title: str,
+    event_description: str,
     host_name: str,
     participants: list[str],
+    participant_context: str,
     player_name: str,
     chronology: str,
     narrative_so_far: list[str],
@@ -118,8 +118,10 @@ async def generate_scene(
     provider,
     *,
     event_title: str,
+    event_description: str,
     host_name: str,
     participants: list[str],
+    participant_context: str,
     player_name: str,
     chronology: str,
     narrative_so_far: list[str],
@@ -149,9 +151,12 @@ async def generate_scene(
         logger.warning("scene generation failed, using fallback: %s", exc)
         return _fallback_scene(
             event_title=event_title,
+            event_description=event_description,
             participants=participants,
             player_name=player_name,
             turn_index=turn_index,
+            last_action=last_action,
+            free_text_action=free_text_action,
         )
     data = _extract_json(text)
     if data is None:
