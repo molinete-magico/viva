@@ -49,7 +49,6 @@ def character_detail_out(
     base = character_out(character, photo_url=photo_url, show_bio=show_bio)
     return CharacterDetailOut(
         **base.model_dump(),
-        money=character.money if is_me else None,
         stats=stats or CharacterStats(),
         is_me=is_me,
         hobbies=list(character.hobbies) if show_hobbies else [],
