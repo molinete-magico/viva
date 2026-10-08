@@ -30,8 +30,8 @@ export function WorldPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6">
-      <div className="rounded-3xl border border-line bg-surface p-6">
+    <div className="mx-auto max-w-2xl">
+      <div className="border-b border-line bg-surface px-4 py-6">
         <p className="text-xs font-semibold uppercase tracking-widest text-accent">Vila Serena</p>
         <h1 className="mt-2 font-display text-4xl font-semibold text-ink">O que está rolando</h1>
         <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-soft">Não existe uma agenda para seguir. A cidade continua produzindo conversas, posts, encontros e situações que você pode entrar e viver quando quiser.</p>
@@ -40,7 +40,7 @@ export function WorldPage() {
       {error && <div className="mt-3"><WarningBanner message={error} onClose={() => setError('')} /></div>}
       {notice && <div className="mt-3"><WarningBanner message={notice} onClose={() => setNotice('')} /></div>}
 
-      <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
+      <div className="mt-0 border-b border-line bg-surface p-4">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Como anda a cidade</h2>
         <p className="mt-2 text-sm leading-relaxed text-ink-soft">
           A cidade não espera você para ter assunto. Atualize quando quiser para descobrir novas situações e consequências sociais.
@@ -55,7 +55,7 @@ export function WorldPage() {
         </button>
       </div>
 
-      <section className="mt-4 rounded-2xl border border-line bg-surface p-4">
+      <section className="border-b border-line bg-surface p-4">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Pulso da cidade</h2>
         {pulse.loading ? (
           <Spinner label="Medindo a movimentação" />
