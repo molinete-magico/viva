@@ -101,12 +101,7 @@ def _scene_participant_context(participants: list[Character], player_name: str) 
 
 
 def _scene_participant_names(participants: list[Character], player_name: str) -> list[str]:
-    names = [c.name for c in participants]
-    others = [n for n in names if n != player_name]
-    slots = others
-    if len(slots) < 2:
-        slots = slots + ["os presentes"]
-    return slots[:3]
+    return [c.name for c in participants if c.name and c.name != player_name][:3]
 
 
 def create_event(session: Session, host: Character, req: CreateEventRequest) -> Event:
@@ -157,13 +152,16 @@ def create_event(session: Session, host: Character, req: CreateEventRequest) -> 
     )
     session.add(host_participant)
     for invitee_id in invitee_ids:
+        invitee = session.get(Character, invitee_id)
+        invitee_status = de.PARTICIPANT_ACCEPTED if invitee is not None and invitee.is_npc else de.PARTICIPANT_INVITED
         session.add(
             EventParticipant(
                 event_id=event.id,
                 character_id=invitee_id,
-                status=de.PARTICIPANT_INVITED,
+                status=invitee_status,
+                responded_at=utcnow() if invitee_status == de.PARTICIPANT_ACCEPTED else None,
             )
-        )
+        )        )
     session.commit()
     player_invitees = session.exec(
         select(Character).where(Character.id.in_(invitee_ids), Character.user_id.is_not(None))
