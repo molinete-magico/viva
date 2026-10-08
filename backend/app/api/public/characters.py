@@ -108,9 +108,7 @@ def unfollow_character(
 ):
     actor = character_service.require_active_character(session, user)
     social_service.unfollow_character(session, actor, character_id)
-    return FollowOut(following=False, followers_count=social_service.follower_count(session, character_id))
-
-@router.patch("/me", response_model=CharacterDetailOut)
+    return FollowOut(following=False, followers_count=social_service.follower_count(session, character_id))@router.patch("/me", response_model=CharacterDetailOut)
 def update_my_character(
     req: UpdateCharacterRequest,
     user: User = Depends(get_current_user),
@@ -139,3 +137,6 @@ def set_my_photo(data: dict = Body(...), user: User = Depends(get_current_user),
         from app.domain.errors import ServiceError
         raise ServiceError(str(exc), 400) from exc
     return {"photo_url": url}
+
+
+
