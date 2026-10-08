@@ -22,18 +22,17 @@ FALLBACK_ACTIONS = [
 
 
 def _fallback_scene(*, event_title: str, event_description: str, participants: list[str], player_name: str, turn_index: int, last_action: str | None = None, free_text_action: str | None = None) -> dict[str, Any]:
-    people = [p for p in participants if p and p != player_name and p != "os presentes"]
-    subject = people[0] if people else "a situação"
+    people = [p for p in participants if p and p != player_name]
+    subject = people[0] if people else None
     detail = event_description.strip() or event_title
     if turn_index == 0:
-        narrative = f"{detail}. {subject} está ali e a situação já está acontecendo; não há uma reação pronta esperando por você."
+        narrative = f"{detail}. {subject} está com você na situação." if subject else f"{detail}. A situação começa sem outro participante identificado."
     else:
-        action = free_text_action or last_action
-        if action:
-            narrative = f"{subject} continua na situação. {subject} reage ao que você fez: {action}."
+        if subject:
+            narrative = f"{subject} reage ao que aconteceu e mantém a conversa em andamento."
         else:
-            narrative = f"{subject} continua na situação. A conversa segue sem transformar o momento em algo maior do que ele é."
-    dialogue = [{"speaker": subject, "line": "E aí?" if turn_index == 0 else "Tá."}] if people else []
+            narrative = "A situação continua a partir do que aconteceu na rodada anterior."
+    dialogue = [{"speaker": subject, "line": "Oi." if turn_index == 0 else "Uhum."}] if subject else []
     return {
         "narrative": narrative[:8000],
         "dialogue": dialogue,
@@ -180,9 +179,12 @@ async def generate_scene(
     if not narrative or not actions:
         return _fallback_scene(
             event_title=event_title,
+            event_description=event_description,
             participants=participants,
             player_name=player_name,
             turn_index=turn_index,
+            last_action=last_action,
+            free_text_action=free_text_action,
         )
     return {
         "narrative": narrative,
