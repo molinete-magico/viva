@@ -7,11 +7,8 @@ class EventOut(BaseModel):
     id: int
     title: str
     description: str
-    scheduled_at: datetime | None = None
     status: str
     kind: str
-    location_id: int
-    location_name: str = ""
     host_character_id: int | None = None
     host_name: str = ""
     participant_count: int = 0
@@ -23,7 +20,6 @@ class CreateEventRequest(BaseModel):
     title: str = Field(min_length=2, max_length=200)
     description: str = Field(default="", max_length=4000)
     location_id: int
-    scheduled_at: datetime | None = None
     kind: str = Field(default="social", max_length=32)
     invite_conversation_ids: list[int] = Field(default_factory=list)
 
