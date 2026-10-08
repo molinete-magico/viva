@@ -6,6 +6,14 @@ from app.models import Character
 from app.schemas.auth import CharacterOut, character_out
 
 
+class UpdateCharacterRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    age: int | None = Field(default=None, ge=16, le=99)
+    pronouns: str | None = Field(default=None, max_length=60)
+    bio: str | None = Field(default=None, max_length=2000)
+    profession_label: str | None = Field(default=None, max_length=120)
+
+
 class CreateCharacterRequest(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     age: int = Field(ge=16, le=99)
@@ -56,6 +64,7 @@ __all__ = [
     "CharacterOut",
     "CharacterStats",
     "CreateCharacterRequest",
+    "UpdateCharacterRequest",
     "character_detail_out",
     "character_out",
 ]
