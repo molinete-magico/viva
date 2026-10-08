@@ -75,7 +75,6 @@ def create_character(
         profession_label=req.profession_label.strip(),
         is_npc=req.is_npc,
         discovered_level=req.discovered_level,
-        money=req.money,
         personality={"energy": 0.5, "formality": 0.5, "humor": 0.5, "emoji_usage": 0.4, "tone": "neutro"},
     )
     session.add(character)
