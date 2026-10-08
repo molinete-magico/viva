@@ -125,6 +125,7 @@ def create_event(session: Session, host: Character, req: CreateEventRequest) -> 
         host_character_id=host.id,
         created_by="system" if host.is_npc else "player",
         scheduled_at=None,
+        status=de.EVENT_OPEN,
         kind=req.kind,
         max_participants=6,
     )
