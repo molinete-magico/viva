@@ -23,7 +23,6 @@ export interface CharacterStats {
 }
 
 export interface CharacterDetail extends Character {
-  money: number | null
   stats: CharacterStats
   is_me: boolean
   hobbies: string[]
