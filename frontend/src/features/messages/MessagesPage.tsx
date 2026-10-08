@@ -8,7 +8,7 @@ export function MessagesPage() {
   const conversations = useFetch<Listing<Conversation>>('/conversations')
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-5">
+    <div className="mx-auto max-w-2xl">
       <div><p className="viva-kicker text-accent">Caixa de entrada</p><h1 className="mt-1 font-display text-3xl font-black tracking-tight text-ink">Mensagens</h1><p className="mt-1 text-sm text-ink-soft">Conversas que continuam vivendo quando você sai.</p></div>
 
       {conversations.loading ? (
@@ -21,12 +21,12 @@ export function MessagesPage() {
           hint="Quando alguém puxar papo com você, aparece aqui."
         />
       ) : (
-        <ul className="viva-panel mt-5 divide-y divide-line overflow-hidden rounded-3xl border border-line bg-surface">
+        <ul className="mt-5 divide-y divide-line border-y border-line">
           {conversations.data?.items.map((conversation) => (
             <li key={conversation.id}>
               <Link
                 to={`/messages/${conversation.id}`}
-                className="flex items-center gap-4 px-5 py-4 transition hover:bg-paper"
+                className="flex items-center gap-4 px-4 py-4 transition hover:bg-paper"
               >
                 <Avatar name={conversation.partner.name} photoUrl={conversation.partner.photo_url} />
                 <div className="min-w-0 flex-1">
