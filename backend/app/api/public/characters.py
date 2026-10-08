@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 from app.api.deps import get_current_user
 from app.database.session import get_session
 from app.models import CharacterPhoto, User
-from app.schemas.character import CharacterDetailOut, CreateCharacterRequest, character_detail_out
+from app.schemas.character import CharacterDetailOut, CreateCharacterRequest, UpdateCharacterRequest, character_detail_out
 from app.schemas.common import Listing
 from app.schemas.auth import CharacterOut, character_out
 from app.schemas.social import FeedResponse, FollowOut
@@ -109,6 +109,23 @@ def unfollow_character(
     actor = character_service.require_active_character(session, user)
     social_service.unfollow_character(session, actor, character_id)
     return FollowOut(following=False, followers_count=social_service.follower_count(session, character_id))
+
+@router.patch("/me", response_model=CharacterDetailOut)
+def update_my_character(
+    req: UpdateCharacterRequest,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    character = character_service.require_active_character(session, user)
+    for field, value in req.model_dump(exclude_unset=True).items():
+        if isinstance(value, str):
+            value = value.strip()
+        setattr(character, field, value)
+    session.add(character)
+    session.commit()
+    session.refresh(character)
+    return character_detail_out(character, is_me=True, stats=character_service.stats_for(session, character.id), photo_url=character_service.photo_url_map(session, [character]).get(character.id), show_bio=True, show_hobbies=True)
+
 
 @router.post("/me/photo", response_model=dict)
 def set_my_photo(data: dict = Body(...), user: User = Depends(get_current_user), session: Session = Depends(get_session)):
