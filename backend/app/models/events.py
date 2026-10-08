@@ -16,7 +16,7 @@ class Event(SQLModel, table=True):
     location_id: int = Field(index=True, foreign_key="locations.id")
     host_character_id: int | None = Field(default=None, index=True, foreign_key="characters.id")
     created_by: str = Field(default="system", max_length=16)
-    scheduled_at: datetime = Field(index=True)
+    scheduled_at: datetime | None = Field(default=None, index=True)
     status: str = Field(default="SCHEDULED", index=True, max_length=16)
     kind: str = Field(default="social", max_length=32)
     max_participants: int | None = Field(default=None)
