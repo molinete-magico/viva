@@ -14,6 +14,13 @@ class AdminCharacterUpdate(BaseModel):
     current_location_id: int | None = None
     personality: dict | None = None
     communication_style: str | None = None
+    pronouns: str | None = Field(default=None, max_length=60)
+    hobbies: list | None = None
+    likes: list | None = None
+    dislikes: list | None = None
+    goals: list | None = None
+    flaws: list | None = None
+    favorite_location_ids: list | None = None
 
 
 class AdminCharacterCreate(BaseModel):
