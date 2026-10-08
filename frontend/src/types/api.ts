@@ -126,7 +126,7 @@ export interface EventItem {
   id: number
   title: string
   description: string
-  scheduled_at: string
+  scheduled_at: string | null
   status: string
   kind: string
   location_id: number
