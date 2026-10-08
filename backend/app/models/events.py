@@ -13,7 +13,8 @@ class Event(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     title: str = Field(max_length=200)
     description: str = Field(default="", max_length=4000)
-    location_id: int = Field(index=True, foreign_key="locations.id")
+    # Legacy field kept nullable for database compatibility; activities no longer depend on locations.
+    location_id: int | None = Field(default=None, index=True, foreign_key="locations.id")
     host_character_id: int | None = Field(default=None, index=True, foreign_key="characters.id")
     created_by: str = Field(default="system", max_length=16)
     scheduled_at: datetime | None = Field(default=None, index=True)
