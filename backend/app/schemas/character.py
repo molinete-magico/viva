@@ -29,7 +29,6 @@ class CharacterStats(BaseModel):
 
 
 class CharacterDetailOut(CharacterOut):
-    money: float | None = None
     stats: CharacterStats = Field(default_factory=CharacterStats)
     is_me: bool = False
     hobbies: list[str] = Field(default_factory=list)
