@@ -179,7 +179,6 @@ def resolve_ambient_events(session: Session, moment: datetime) -> tuple[int, lis
         select(Event).where(
             Event.kind == "ambient",
             Event.status == "OPEN",
-            Event.scheduled_at <= moment,
         ).order_by(Event.id.asc()).limit(8)
     ).all()
     completed = 0
@@ -188,6 +187,15 @@ def resolve_ambient_events(session: Session, moment: datetime) -> tuple[int, lis
         participants = session.exec(
             select(EventParticipant).where(EventParticipant.event_id == event.id)
         ).all()
+        # Atividades com jogadores convidados permanecem abertas para a pessoa entrar.
+        has_player = False
+        for participant in participants:
+            character = session.get(Character, participant.character_id)
+            if character is not None and character.user_id is not None:
+                has_player = True
+                break
+        if has_player:
+            continue
         joined: list[Character] = []
         for participant in participants:
             character = session.get(Character, participant.character_id)
