@@ -91,8 +91,30 @@ def create_event(session: Session, host: Character, req: CreateEventRequest) -> 
     location = session.get(Location, req.location_id)
     if location is None:
         raise ServiceError("Local do evento não existe.", 400)
-    if req.invitees and host.id in req.invitees:
-        req.invitees.remove(host.id)
+    invitee_ids: list[int] = []
+    seen_conversations: set[int] = set()
+    for conversation_id in req.invite_conversation_ids:
+        if conversation_id in seen_conversations:
+            continue
+        seen_conversations.add(conversation_id)
+        conversation = session.get(Conversation, conversation_id)
+        if conversation is None:
+            raise ServiceError(f"Conversa #{conversation_id} não existe.", 400)
+        if host.id not in (conversation.character_a_id, conversation.character_b_id):
+            raise ServiceError(f"Você não participa da conversa #{conversation_id}.", 403)
+        target_id = (
+            conversation.character_b_id
+            if conversation.character_a_id == host.id
+            else conversation.character_a_id
+        )
+        target = session.get(Character, target_id)
+        if target is None:
+            raise ServiceError(f"O personagem da conversa #{conversation_id} não existe.", 400)
+        if target.id == host.id:
+            continue
+        if target.id not in invitee_ids:
+            invitee_ids.append(target.id)
+
     event = Event(
         title=req.title.strip(),
         description=req.description.strip(),
@@ -113,7 +135,7 @@ def create_event(session: Session, host: Character, req: CreateEventRequest) -> 
         joined_at=utcnow(),
     )
     session.add(host_participant)
-    for invitee_id in req.invitees:
+    for invitee_id in invitee_ids:
         session.add(
             EventParticipant(
                 event_id=event.id,
@@ -123,7 +145,7 @@ def create_event(session: Session, host: Character, req: CreateEventRequest) -> 
         )
     session.commit()
     player_invitees = session.exec(
-        select(Character).where(Character.id.in_(req.invitees), Character.user_id.is_not(None))
+        select(Character).where(Character.id.in_(invitee_ids), Character.user_id.is_not(None))
     ).all() if req.invitees else []
     world = _world_chronology(session)
     for player in player_invitees:
