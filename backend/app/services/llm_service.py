@@ -10,7 +10,7 @@ from app.llm.prompts import build_comment_prompt, build_post_prompt, complete_wi
 from app.models import Character, Follow, Memory, Post, WorldState
 
 
-def generate_npc_post(session: Session, npc: Character, *, simulated_at: datetime | None = None) -> Post:
+def generate_npc_post(session: Session, npc: Character, *, simulated_at: datetime | None = None, extra_context: str = "") -> Post:
     """Gera um post público do NPC usando o modelo rápido.
 
     Levanta LLMError se a API falhar; o chamador decide o que fazer.
@@ -44,6 +44,8 @@ def generate_npc_post(session: Session, npc: Character, *, simulated_at: datetim
     for previous in recent_posts:
         context_lines.append(f"Post recente: {previous.content}")
     recent_context = "\n".join(context_lines[:9])
+    if extra_context.strip():
+        recent_context = (recent_context + "\n" + extra_context.strip()).strip()
 
     system_prompt, user_prompt = build_post_prompt(
         npc_name=npc.name,
