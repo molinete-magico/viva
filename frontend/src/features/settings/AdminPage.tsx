@@ -1,154 +1,24 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../services/api'
-import { ErrorState, Spinner, useFetch, WarningBanner } from '../../components/ui'
+import { Avatar, ErrorState, Spinner, WarningBanner, useFetch } from '../../components/ui'
 import type { Listing } from '../../types/api'
 
 interface AdminCharacter {
-  id: number
-  name: string
-  age: number
-  bio: string
-  profession_label: string
-  is_npc: boolean
-  discovered_level: number
-  money: number
-  current_location_id: number | null
+  id:number; name:string; age:number; pronouns:string; bio:string; profession_label:string; is_npc:boolean
+  discovered_level:number; current_location_id:number|null; communication_style:string
+  personality:Record<string,unknown>; hobbies:string[]; likes:string[]; dislikes:string[]; goals:string[]; flaws:string[]; photo_url:string|null
 }
+const LEVEL_LABELS:Record<number,string>={1:'rosto novo',2:'conhecido',3:'amigo da vila'}
+const listField=(v:string[])=>v.join(', ')
+const parseList=(v:string)=>v.split(',').map(x=>x.trim()).filter(Boolean)
 
-interface AdminJob {
-  id: number
-  title: string
-  salary_per_shift: number
-}
-
-const LEVEL_LABELS: Record<number, string> = { 1: 'rosto novo', 2: 'conhecido', 3: 'amigo da vila' }
-
-export function AdminPage() {
-  const characters = useFetch<Listing<AdminCharacter>>('/admin/characters')
-  const jobs = useFetch<Listing<AdminJob>>('/admin/jobs')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
-
-  async function update(character: AdminCharacter, patch: Record<string, unknown>) {
-    setBusy(true)
-    setError('')
-    try {
-      await api(`/admin/characters/${character.id}`, { method: 'PATCH', body: patch })
-      characters.reload()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Algo deu errado.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function runRoutines() {
-    setBusy(true)
-    setError('')
-    setNotice('')
-    try {
-      const result = await api<{ summary: string; elapsed_minutes: number }>(`/admin/simulation/routines`, {
-        method: 'POST',
-      })
-      setNotice(`${result.summary}`)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'A simulação falhou.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="mx-auto max-w-2xl px-4 py-5">
-      <Link to="/settings" className="text-xs font-medium text-accent-deep transition hover:underline">
-        ‹ Configurações
-      </Link>
-      <h1 className="mt-2 font-display text-xl font-semibold text-ink">Painel da simulação</h1>
-
-      {error && <div className="mt-3"><WarningBanner message={error} onClose={() => setError('')} /></div>}
-      {notice && <div className="mt-3"><WarningBanner message={notice} onClose={() => setNotice('')} /></div>}
-
-      <button
-        type="button"
-        disabled={busy}
-        onClick={runRoutines}
-        className="tap mt-4 w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
-      >
-        Rodar rotinas agora
-      </button>
-
-      <section className="mt-5 rounded-2xl border border-line bg-surface p-5">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
-          Moradores · {characters.data?.items.length ?? '…'}
-        </h2>
-        {characters.loading ? (
-          <Spinner />
-        ) : characters.error ? (
-          <ErrorState message={characters.error} onRetry={characters.reload} />
-        ) : (
-          <ul className="mt-3 space-y-2">
-            {characters.data?.items.map((character) => (
-              <li key={character.id} className="rounded-xl border border-line bg-paper p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-ink">{character.name}</p>
-                  <span className="text-xs text-ink-faint">
-                    {character.is_npc ? 'morador' : 'você? não — jogador'}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-ink-soft">{character.profession_label || 'sem ocupação'}</p>
-                <div className="mt-2 flex items-center gap-2 text-xs">
-                  <span className="text-ink-faint">Nível:</span>
-                  {(character.is_npc ? [1, 2, 3] : [character.discovered_level]).map((level) => (
-                    <button
-                      key={level}
-                      type="button"
-                      disabled={busy}
-                      onClick={() => update(character, { discovered_level: level })}
-                      className={`tap rounded-full px-2 py-0.5 transition ${
-                        character.discovered_level === level
-                          ? 'bg-sea-soft font-semibold text-sea'
-                          : 'border border-line text-ink-faint hover:border-sea'
-                      }`}
-                    >
-                      {level} · {LEVEL_LABELS[level]}
-                    </button>
-                  ))}
-                </div>
-                <div className="mt-2 flex items-center gap-2 text-xs">
-                  <span className="text-ink-faint">Vivas:</span>
-                  <span className="tabular-nums text-ink">{character.money}</span>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => update(character, { money: (character.money ?? 0) + 100 })}
-                    className="tap ml-auto rounded-full border border-line px-2 py-0.5 text-ink-soft transition hover:border-sea"
-                  >
-                    +100
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="mt-5 rounded-2xl border border-line bg-surface p-5">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Vagas e salários</h2>
-        {jobs.data?.items.length ? (
-          <ul className="mt-3 space-y-1.5">
-            {jobs.data.items.map((job) => (
-              <li key={job.id} className="flex items-center justify-between text-sm">
-                <span className="text-ink">{job.title}</span>
-                <span className="tabular-nums text-ink-faint">R$ {job.salary_per_shift}/turno</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-2 text-sm text-ink-faint">Sem vagas registradas.</p>
-        )}
-      </section>
-    </div>
-  )
+export function AdminPage(){
+ const characters=useFetch<Listing<AdminCharacter>>('/admin/characters')
+ const [editing,setEditing]=useState<number|null>(null); const [draft,setDraft]=useState<AdminCharacter|null>(null)
+ const [busy,setBusy]=useState(false); const [error,setError]=useState(''); const fileRef=useRef<HTMLInputElement>(null)
+ function startEdit(c:AdminCharacter){setEditing(c.id);setDraft({...c,personality:{...(c.personality??{})}});setError('')}
+ async function save(){if(!draft)return;setBusy(true);setError('');try{await api(`/admin/characters/${draft.id}`,{method:'PATCH',body:{name:draft.name,age:draft.age,pronouns:draft.pronouns,bio:draft.bio,profession_label:draft.profession_label,discovered_level:draft.discovered_level,communication_style:draft.communication_style,personality:draft.personality,hobbies:draft.hobbies,likes:draft.likes,dislikes:draft.dislikes,goals:draft.goals,flaws:draft.flaws,current_location_id:draft.current_location_id}});setEditing(null);setDraft(null);characters.reload()}catch(e){setError(e instanceof Error?e.message:'Não foi possível salvar.')}finally{setBusy(false)}}
+ async function uploadPhoto(file:File){if(!draft)return;if(!file.type.startsWith('image/')||file.size>5*1024*1024){setError('Use uma imagem de até 5 MB.');return}const data=await new Promise<string>((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result));r.onerror=()=>reject(new Error('Não foi possível ler a imagem.'));r.readAsDataURL(file)});setBusy(true);try{const result=await api<{photo_url:string}>(`/admin/characters/${draft.id}/photo`,{method:'POST',body:{data}});setDraft({...draft,photo_url:result.photo_url});characters.reload()}catch(e){setError(e instanceof Error?e.message:'Não foi possível trocar a foto.')}finally{setBusy(false)}}
+ return <div className="mx-auto max-w-4xl px-4 py-5"><Link to="/settings" className="text-xs font-medium text-accent-deep">‹ Configurações</Link><h1 className="mt-2 font-display text-xl font-semibold text-ink">Moradores da cidade</h1><p className="mt-1 text-sm text-ink-soft">Edite a ficha dos NPCs: foto, personalidade, voz, interesses, objetivos e história.</p>{error&&<div className="mt-3"><WarningBanner message={error} onClose={()=>setError('')}/></div>}<section className="mt-5 space-y-3">{characters.loading?<Spinner/>:characters.error?<ErrorState message={characters.error} onRetry={characters.reload}/>:characters.data?.items.map(c=>{const d=editing===c.id&&draft;return <article key={c.id} className="rounded-2xl border border-line bg-surface p-4"><div className="flex items-start gap-4"><Avatar name={c.name} size="lg" photoUrl={d?d.photo_url:c.photo_url}/><div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><div><h2 className="font-semibold text-ink">{c.name}</h2><p className="text-xs text-ink-soft">{c.profession_label||'sem ocupação'} · {c.age} anos</p></div><span className="text-xs text-ink-faint">{c.is_npc?'NPC':'jogador'}</span></div>{!d?<div className="mt-3 flex flex-wrap gap-2">{[1,2,3].map(l=><span key={l} className={`rounded-full px-2 py-1 text-[11px] ${c.discovered_level===l?'bg-sea-soft text-sea':'border border-line text-ink-faint'}`}>{l} · {LEVEL_LABELS[l]}</span>)}<button type="button" onClick={()=>startEdit(c)} className="tap ml-auto rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-white">Editar ficha</button></div>:<div className="mt-4 grid gap-3 sm:grid-cols-2"><input value={d.name} onChange={e=>setDraft({...d,name:e.target.value})} placeholder="Nome" className="field"/><input type="number" value={d.age} onChange={e=>setDraft({...d,age:Number(e.target.value)})} className="field"/><input value={d.pronouns} onChange={e=>setDraft({...d,pronouns:e.target.value})} placeholder="Pronomes" className="field"/><input value={d.profession_label} onChange={e=>setDraft({...d,profession_label:e.target.value})} placeholder="Profissão" className="field"/><input value={d.communication_style} onChange={e=>setDraft({...d,communication_style:e.target.value})} placeholder="Estilo de comunicação" className="field"/><select value={d.discovered_level} onChange={e=>setDraft({...d,discovered_level:Number(e.target.value)})} className="field"><option value={1}>Rosto novo</option><option value={2}>Conhecido</option><option value={3}>Amigo da vila</option></select><textarea value={d.bio} onChange={e=>setDraft({...d,bio:e.target.value})} placeholder="Bio" rows={3} className="field sm:col-span-2"/>{(['hobbies','likes','dislikes','goals','flaws'] as const).map(k=><input key={k} value={listField(d[k])} onChange={e=>setDraft({...d,[k]:parseList(e.target.value)})} placeholder={k} className="field"/>)}<textarea value={JSON.stringify(d.personality,null,2)} onChange={e=>{try{setDraft({...d,personality:JSON.parse(e.target.value)})}catch{}}} rows={5} placeholder="Personalidade (JSON)" className="field font-mono text-xs sm:col-span-2"/><div className="flex flex-wrap gap-2 sm:col-span-2"><input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f)void uploadPhoto(f);e.currentTarget.value=''}}/><button type="button" disabled={busy} onClick={()=>fileRef.current?.click()} className="tap rounded-full border border-line px-4 py-2 text-sm">Trocar foto</button><button type="button" disabled={busy} onClick={save} className="tap rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white">{busy?'Salvando…':'Salvar ficha'}</button><button type="button" disabled={busy} onClick={()=>{setEditing(null);setDraft(null)}} className="tap rounded-full border border-line px-4 py-2 text-sm text-ink-soft">Cancelar</button></div></div>}</div></div></article>})}</section></div>
 }
