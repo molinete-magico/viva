@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../services/api'
 import { EmptyState, ErrorState, Spinner, useFetch, WarningBanner } from '../../components/ui'
-import type { Conversation, EventItem, Listing, Location } from '../../types/api'
+import type { Conversation, EventItem, Listing } from '../../types/api'
 
 const STATUS_LABELS: Record<string, string> = {
   SCHEDULED: 'Disponível',
@@ -23,7 +23,6 @@ const PARTICIPANT_LABELS: Record<string, string> = {
 const emptyForm = {
   title: '',
   description: '',
-  location_id: 0,
   invite_conversation_ids: [] as number[],
 }
 
@@ -34,7 +33,6 @@ export function EventsPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [onlyMine, setOnlyMine] = useState(false)
   const events = useFetch<Listing<EventItem>>(onlyMine ? '/events?mine=true' : '/events', [onlyMine])
-  const locations = useFetch<Listing<Location>>('/world/locations')
   const conversations = useFetch<Listing<Conversation>>('/conversations')
 
   async function createEvent() {
@@ -42,13 +40,11 @@ export function EventsPage() {
     setError('')
     try {
       if (!form.title.trim()) throw new Error('Dê um título ao evento.')
-      if (!form.location_id) throw new Error('Escolha onde vai rolar.')
       await api<EventItem>('/events', {
         method: 'POST',
         body: {
           title: form.title,
           description: form.description,
-          location_id: form.location_id,
           invite_conversation_ids: form.invite_conversation_ids,
         },
       })
@@ -97,7 +93,7 @@ export function EventsPage() {
             createEvent()
           }}
         >
-          <h2 className="text-sm font-semibold text-ink">Criar uma cena</h2>
+          <h2 className="text-sm font-semibold text-ink">Criar uma atividade</h2>
           <input
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -111,16 +107,6 @@ export function EventsPage() {
             rows={2}
             className="w-full resize-none rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
           />
-          <div>
-            <select
-              value={form.location_id}
-              onChange={(e) => setForm({ ...form, location_id: Number(e.target.value) })}
-              className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
-            >
-              <option value={0}>Onde?</option>
-              {(locations.data?.items ?? []).map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
-            </select>
-          </div>
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">Convidar moradores</p>
             {conversations.loading ? (
@@ -190,9 +176,6 @@ export function EventsPage() {
                     {STATUS_LABELS[event.status] ?? event.status}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-ink-soft">
-                  {event.location_name ? `📍 ${event.location_name}` : 'Na cidade'}
-                </p>
                 {event.description && (
                   <p className="mt-2 text-sm leading-relaxed text-ink-soft">{event.description}</p>
                 )}
