@@ -33,7 +33,6 @@ export function EventPage() {
 
   const data = event.data
   const open = ['SCHEDULED', 'OPEN', 'ACTIVE'].includes(data.status)
-  const canPlay = open && ['ACCEPTED', 'JOINED'].includes(data.my_status ?? '')
 
   async function rsvp(accept: boolean) {
     setBusy(true)
