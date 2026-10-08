@@ -341,13 +341,22 @@ def _scene(
 ) -> dict:
     participants = _npc_participants(session, event, exclude_id=character.id)
     world = _world_chronology(session)
-    narrative_rows = session.exec(
-        select(EventTurn.narrative)
+    turn_rows = session.exec(
+        select(EventTurn)
         .where(EventTurn.session_id == event_session.id)
         .order_by(EventTurn.turn_index.desc())
-        .limit(8)
+        .limit(10)
     ).all()
-    narrative_so_far = [row[0] for row in narrative_rows][::-1]
+    turn_rows = list(reversed(turn_rows))
+    narrative_so_far: list[str] = []
+    for previous in turn_rows:
+        if previous.player_action_label:
+            narrative_so_far.append(f"Jogador: {previous.player_action_label}")
+        if previous.narrative:
+            narrative_so_far.append(f"Cena: {previous.narrative}")
+        for line in (previous.dialogue or [])[:3]:
+            if isinstance(line, dict) and line.get("speaker") and line.get("line"):
+                narrative_so_far.append(f"{line['speaker']}: {line['line']}")
     chronology = f"{world['day_name']}, dia {world['date']}"
     host = session.get(Character, event.host_character_id) if event.host_character_id else None
     scene = asyncio.run(
