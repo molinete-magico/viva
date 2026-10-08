@@ -6,9 +6,9 @@ import type { EventItem, Listing, Location } from '../../types/api'
 import { formatEventTime } from '../../utils/format'
 
 const STATUS_LABELS: Record<string, string> = {
-  SCHEDULED: 'Marcado',
+  SCHEDULED: 'Disponível',
   OPEN: 'Aberto',
-  ACTIVE: 'Acontecendo agora',
+  ACTIVE: 'Em andamento',
   COMPLETED: 'Encerrado',
   CANCELLED: 'Cancelado',
 }
@@ -73,7 +73,7 @@ export function EventsPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-5">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="font-display text-xl font-semibold text-ink">Eventos</h1>
+        <h1 className="font-display text-xl font-semibold text-ink">Atividades</h1>
         <div className="flex gap-2">
           <button
             type="button"
@@ -89,7 +89,7 @@ export function EventsPage() {
             onClick={() => setShowCreate((v) => !v)}
             className="tap rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
           >
-            {showCreate ? 'Fechar' : 'Criar'}
+            {showCreate ? 'Fechar' : 'Criar cena'}
           </button>
         </div>
       </div>
@@ -104,7 +104,7 @@ export function EventsPage() {
             createEvent()
           }}
         >
-          <h2 className="text-sm font-semibold text-ink">Marcar algo na cidade</h2>
+          <h2 className="text-sm font-semibold text-ink">Criar uma cena</h2>
           <input
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -149,17 +149,17 @@ export function EventsPage() {
             disabled={saving}
             className="tap w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
           >
-            {saving ? 'Marcando...' : 'Marcar evento'}
+            {saving ? 'Marcando...' : 'Criar atividade'}
           </button>
         </form>
       )}
 
       {events.loading ? (
-        <Spinner label="Consultando a agenda" />
+        <Spinner label="Procurando cenas" />
       ) : events.error ? (
         <ErrorState message={events.error} onRetry={events.reload} />
       ) : (events.data?.items.length ?? 0) === 0 ? (
-        <EmptyState title="Nada marcado ainda." hint="Convites e festas aparecem aqui assim que surgirem." />
+        <EmptyState title="Nada acontecendo por aqui." hint="Novas situações aparecem quando alguém da cidade puxa uma cena." />
       ) : (
         <ul className="mt-4 space-y-3">
           {events.data?.items.map((event) => (
@@ -182,7 +182,7 @@ export function EventsPage() {
                   <p className="mt-2 text-sm leading-relaxed text-ink-soft">{event.description}</p>
                 )}
                 <p className="mt-2 text-xs text-ink-faint">
-                  {event.participant_count} {event.participant_count === 1 ? 'participante' : 'participantes'}
+                  {event.participant_count} {event.participant_count === 1 ? 'na cena' : 'na cena'}
                   {event.host_name ? ` · por ${event.host_name}` : ''}
                   {event.my_status ? ` · ${PARTICIPANT_LABELS[event.my_status] ?? event.my_status}` : ''}
                 </p>
