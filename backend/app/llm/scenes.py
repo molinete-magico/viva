@@ -66,7 +66,7 @@ def build_scene_prompt(
     last_action: str | None,
     free_text_action: str | None = None,
 ) -> tuple[str, str]:
-    who = ", ".join(p for p in participants if p and p != player_name) or "os presentes"
+    who = ", ".join(p for p in participants if p and p != player_name) or "nenhum outro participante"
     history = "\n".join(narrative_so_far[-8:]) or "A cena acabou de começar."
     action_text = last_action or "(ainda não agiu)"
     free_text_text = free_text_action or "(nenhuma ação livre)"
@@ -131,8 +131,10 @@ async def generate_scene(
 ) -> dict[str, Any]:
     system_prompt, user_prompt = build_scene_prompt(
         event_title=event_title,
-            host_name=host_name,
+        event_description=event_description,
+        host_name=host_name,
         participants=participants,
+        participant_context=participant_context,
         player_name=player_name,
         chronology=chronology,
         narrative_so_far=narrative_so_far,
@@ -162,9 +164,12 @@ async def generate_scene(
     if data is None:
         return _fallback_scene(
             event_title=event_title,
+            event_description=event_description,
             participants=participants,
             player_name=player_name,
             turn_index=turn_index,
+            last_action=last_action,
+            free_text_action=free_text_action,
         )
     narrative = data.get("narrative", "").strip()[:8000]
     dialogue = data.get("dialogue") if isinstance(data.get("dialogue"), list) else []
