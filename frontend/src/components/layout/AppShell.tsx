@@ -3,7 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { Avatar } from '../ui'
 import { useFetch } from '../ui'
-import type { Listing, NotificationItem, World } from '../../types/api'
+import type { Listing, NotificationItem } from '../../types/api'
 
 const navItems = [
   { to: '/feed', label: 'Feed', icon: HomeIcon },
@@ -16,7 +16,6 @@ const navItems = [
 export function AppShell() {
   const { user, character, logout } = useAuth()
   const navigate = useNavigate()
-  const world = useFetch<World>('/world')
   const notifications = useFetch<Listing<NotificationItem>>('/notifications')
   const unread = (notifications.data?.items ?? []).filter((n) => !n.read_at).length
 
@@ -26,11 +25,7 @@ export function AppShell() {
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between gap-3 px-4 lg:max-w-6xl lg:px-8">
           <div className="flex items-baseline gap-3">
             <span className="font-display text-2xl font-black tracking-tight text-ink">Viva<span className="text-accent">.</span></span>
-            {world.data && (
-              <span className="hidden text-xs text-ink-soft sm:inline">
-                {world.data.city_name} · {world.data.day_name}, {world.data.time}
-              </span>
-            )}
+
           </div>
           <div className="flex items-center gap-1">
             <ThemeToggle />
