@@ -17,8 +17,9 @@ class Event(SQLModel, table=True):
     location_id: int | None = Field(default=None, index=True, foreign_key="locations.id")
     host_character_id: int | None = Field(default=None, index=True, foreign_key="characters.id")
     created_by: str = Field(default="system", max_length=16)
+    # Legacy column retained for old databases, but activities are immediate roleplay situations.
     scheduled_at: datetime | None = Field(default=None, index=True)
-    status: str = Field(default="SCHEDULED", index=True, max_length=16)
+    status: str = Field(default="OPEN", index=True, max_length=16)
     kind: str = Field(default="social", max_length=32)
     max_participants: int | None = Field(default=None)
     cancel_reason: str | None = Field(default=None, max_length=500)
