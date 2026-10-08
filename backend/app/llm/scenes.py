@@ -343,5 +343,5 @@ async def generate_outcome_summary(
         pass
     people = ", ".join(p for p in participant_names if p and p != player_name)
     if people:
-        return f"Você passou um bom tempo com {people} em {event_title} e saiu de lá mais perto de cada um."
-    return f"Você viveu {event_title} na Vila Serena e levou essa história na memória."
+        return f"Você passou por {event_title} com {people}."
+    return f"Você passou por {event_title} em Vila Serena."
