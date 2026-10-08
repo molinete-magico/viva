@@ -5,23 +5,12 @@ import { ErrorState, Spinner, useFetch, WarningBanner } from '../../components/u
 import type { CatchUpReport, CityPulse, Listing, SimulationLog, World } from '../../types/api'
 
 export function WorldPage() {
-  const world = useFetch<World>('/world')
   const report = useFetch<Listing<SimulationLog>>('/world/catchup-report')
   const pulse = useFetch<CityPulse>('/world/city-pulse')
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
 
-  if (world.loading) return <Spinner label="Consultando o relógio da cidade" />
-  if (world.error) return <ErrorState message={world.error} onRetry={world.reload} />
-  if (!world.data) return null
-
-  const dateLabel = new Date(`${world.data.date}T12:00:00`).toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
 
   async function advance() {
     setBusy(true)
@@ -32,10 +21,9 @@ export function WorldPage() {
         method: 'POST',
       })
       setNotice(`${result.summary}`)
-      world.reload()
       report.reload()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'O relógio travou por um instante.')
+      setError(err instanceof Error ? err.message : 'A cidade não respondeu agora.')
     } finally {
       setBusy(false)
     }
@@ -43,19 +31,10 @@ export function WorldPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <div className="rounded-3xl border border-line bg-surface p-6 text-center">
-        <p className="text-xs font-semibold uppercase tracking-widest text-accent">{world.data.city_name}</p>
-        <p className="mt-3 font-display text-5xl font-semibold tabular-nums text-ink">{world.data.time}</p>
-        <p className="mt-2 text-sm capitalize text-ink-soft">{dateLabel}</p>
-        <p className="mt-4 rounded-full bg-paper px-4 py-2 text-xs text-ink-soft">
-          Última simulação:{' '}
-          {new Date(world.data.last_simulated_at).toLocaleString('pt-BR', {
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </p>
+      <div className="rounded-3xl border border-line bg-surface p-6">
+        <p className="text-xs font-semibold uppercase tracking-widest text-accent">Vila Serena</p>
+        <h1 className="mt-2 font-display text-4xl font-semibold text-ink">O que está rolando</h1>
+        <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-soft">Não existe uma agenda para seguir. A cidade continua produzindo conversas, posts, encontros e situações que você pode entrar e viver quando quiser.</p>
       </div>
 
       {error && <div className="mt-3"><WarningBanner message={error} onClose={() => setError('')} /></div>}
@@ -64,8 +43,7 @@ export function WorldPage() {
       <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Como anda a cidade</h2>
         <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-          Moradores seguem suas rotinas, trabalham e abrem lugares mesmo com o aplicativo fechado. Avance o relógio
-          para ver a vila acordar.
+          A cidade não espera você para ter assunto. Atualize quando quiser para descobrir novas situações e consequências sociais.
         </p>
         <button
           type="button"
@@ -73,7 +51,7 @@ export function WorldPage() {
           onClick={advance}
           className="tap mt-3 w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
         >
-          {busy ? 'A cidade se mexendo…' : 'Pular para o próximo dia'}
+          {busy ? 'Atualizando…' : 'Ver o que mudou'}
         </button>
       </div>
 
