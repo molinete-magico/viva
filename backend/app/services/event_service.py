@@ -147,7 +147,7 @@ def create_event(session: Session, host: Character, req: CreateEventRequest) -> 
     session.commit()
     player_invitees = session.exec(
         select(Character).where(Character.id.in_(invitee_ids), Character.user_id.is_not(None))
-    ).all() if req.invitees else []
+    ).all() if invitee_ids else []
     world = _world_chronology(session)
     for player in player_invitees:
         _notify(
