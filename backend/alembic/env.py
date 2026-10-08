@@ -1,3 +1,4 @@
+import logging
 import sys
 from logging.config import fileConfig
 from pathlib import Path
@@ -14,7 +15,8 @@ from app import models  # noqa: E402, F401
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
+    logging.getLogger().setLevel(logging.INFO)
 
 config.set_main_option("sqlalchemy.url", settings.database_url)
 
