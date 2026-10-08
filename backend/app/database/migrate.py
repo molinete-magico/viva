@@ -19,17 +19,19 @@ def _alembic_config() -> Config:
     return cfg
 
 
-
-def _ensure_event_location_nullable() -> None:
-    """Compatibilidade para bancos criados antes de atividades deixarem de usar locais."""
+def _ensure_events_nullable() -> None:
+    """Compatibilidade para bancos antigos enquanto atividades deixam de usar agenda/local."""
     engine = create_engine(settings.database_url)
     try:
         inspector = inspect(engine)
         if "events" not in inspector.get_table_names():
             return
         columns = {column["name"]: column for column in inspector.get_columns("events")}
-        location = columns.get("location_id")
-        if location is None or location.get("nullable", True):
+        nullable_columns = [
+            name for name in ("location_id", "scheduled_at")
+            if name in columns and not columns[name].get("nullable", True)
+        ]
+        if not nullable_columns:
             return
 
         if engine.dialect.name == "sqlite":
@@ -37,21 +39,24 @@ def _ensure_event_location_nullable() -> None:
                 context = MigrationContext.configure(connection)
                 operations = Operations(context)
                 with operations.batch_alter_table("events", recreate="always") as batch:
-                    batch.alter_column(
-                        "location_id",
-                        existing_type=location["type"],
-                        existing_nullable=False,
-                        nullable=True,
-                    )
+                    for name in nullable_columns:
+                        batch.alter_column(
+                            name,
+                            existing_type=columns[name]["type"],
+                            existing_nullable=False,
+                            nullable=True,
+                        )
         elif engine.dialect.name == "postgresql":
             with engine.begin() as connection:
-                connection.execute(text("ALTER TABLE events ALTER COLUMN location_id DROP NOT NULL"))
+                for name in nullable_columns:
+                    connection.execute(text(f'ALTER TABLE events ALTER COLUMN "{name}" DROP NOT NULL'))
     finally:
         engine.dispose()
 
+
 def run_migrations() -> None:
     logger.info("running migrations")
-    _ensure_event_location_nullable()
+    _ensure_events_nullable()
     command.upgrade(_alembic_config(), "head")
 
 
