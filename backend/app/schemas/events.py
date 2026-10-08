@@ -25,7 +25,7 @@ class CreateEventRequest(BaseModel):
     location_id: int
     scheduled_at: datetime | None = None
     kind: str = Field(default="social", max_length=32)
-    invitees: list[int] = Field(default_factory=list)
+    invite_conversation_ids: list[int] = Field(default_factory=list)
 
 
 class RSVPRequest(BaseModel):
