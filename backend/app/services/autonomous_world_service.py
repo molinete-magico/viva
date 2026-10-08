@@ -413,7 +413,7 @@ def city_pulse(session: Session, moment: datetime) -> dict:
         select(Post).where(Post.created_at >= cutoff).order_by(Post.id.desc()).limit(12)
     ).all()
     events = session.exec(
-        select(Event).where(Event.scheduled_at >= cutoff).order_by(Event.scheduled_at.desc()).limit(8)
+        select(Event).where(Event.created_at >= cutoff).order_by(Event.created_at.desc()).limit(8)
     ).all()
     memories = session.exec(
         select(Memory).where(Memory.occurred_at >= cutoff, Memory.importance >= 35)
@@ -458,7 +458,6 @@ def city_pulse(session: Session, moment: datetime) -> dict:
                 "id": event.id,
                 "title": event.title,
                 "status": event.status,
-                "scheduled_at": event.scheduled_at.isoformat(),
                 "host_name": characters.get(event.host_character_id).name if event.host_character_id and characters.get(event.host_character_id) else "cidade",
             }
             for event in events
