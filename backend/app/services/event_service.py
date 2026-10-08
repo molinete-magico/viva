@@ -99,7 +99,7 @@ def create_event(session: Session, host: Character, req: CreateEventRequest) -> 
         location_id=req.location_id,
         host_character_id=host.id,
         created_by="system" if host.is_npc else "player",
-        scheduled_at=req.scheduled_at,
+        scheduled_at=None,
         kind=req.kind,
     )
     session.add(event)
@@ -135,7 +135,7 @@ def create_event(session: Session, host: Character, req: CreateEventRequest) -> 
                 "event_id": event.id,
                 "title": event.title,
                 "location_name": location.name,
-                "scheduled_at": event.scheduled_at.isoformat(),
+                "scheduled_at": None,
                 "chronology": f"{world['day_name']} {world['date']} {world['time']}",
             },
         )
@@ -290,7 +290,7 @@ def _scene(
         .limit(8)
     ).all()
     narrative_so_far = [row[0] for row in narrative_rows][::-1]
-    chronology = f"{world['day_name']}, dia {world['date']} às {world['time']}"
+    chronology = f"{world['day_name']}, dia {world['date']}"
     host = session.get(Character, event.host_character_id) if event.host_character_id else None
     scene = asyncio.run(
         generate_scene(
