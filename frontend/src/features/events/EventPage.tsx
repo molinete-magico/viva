@@ -5,7 +5,6 @@ import { ErrorState, Spinner, useFetch, WarningBanner } from '../../components/u
 import type { EventDetail } from '../../types/api'
 
 const STATUS_LABELS: Record<string, string> = {
-  SCHEDULED: 'Disponível',
   OPEN: 'Aberto',
   ACTIVE: 'Acontecendo agora',
   COMPLETED: 'Encerrado',
