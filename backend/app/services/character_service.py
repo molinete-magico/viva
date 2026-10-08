@@ -17,7 +17,6 @@ def create_own(session: Session, user: User, req: CreateCharacterRequest) -> Cha
         bio=req.bio.strip(),
         profession_label=req.profession_label.strip(),
         is_npc=False,
-        money=300,
         discovered_level=3,
     )
     session.add(character)
