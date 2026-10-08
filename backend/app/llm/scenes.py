@@ -10,7 +10,7 @@ from app.llm.prompts import complete_with_timeout
 
 logger = logging.getLogger("viva.scenes")
 
-MODEL_SCENE = "quick"
+MODEL_SCENE = "standard"
 
 FALLBACK_ACTIONS = [
     {"id": "observar", "label": "Observar o que está acontecendo", "effects": {"familiarity": 1}, "hint": "ganha familiaridade"},
