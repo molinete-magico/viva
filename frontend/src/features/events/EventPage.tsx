@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../services/api'
 import { ErrorState, Spinner, useFetch, WarningBanner } from '../../components/ui'
 import type { EventDetail } from '../../types/api'
-import { formatEventTime } from '../../utils/format'
 
 const STATUS_LABELS: Record<string, string> = {
   SCHEDULED: 'Marcado',
@@ -80,7 +79,7 @@ export function EventPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-5">
       <Link to="/events" className="text-xs font-medium text-accent-deep transition hover:underline">
-        ‹ Voltar aos eventos
+        ‹ Voltar às atividades
       </Link>
 
       {error && <div className="mt-3"><WarningBanner message={error} onClose={() => setError('')} /></div>}
@@ -93,8 +92,7 @@ export function EventPage() {
           </span>
         </div>
         <p className="mt-2 text-sm text-ink-soft">
-          {formatEventTime(data.scheduled_at)}
-          {data.location_name ? ` · ${data.location_name}` : ''}
+          {data.location_name ? `📍 ${data.location_name}` : 'Na cidade'}
         </p>
         {data.description && <p className="mt-3 text-sm leading-relaxed text-ink-soft">{data.description}</p>}
         {data.cancel_reason && (
@@ -147,7 +145,7 @@ export function EventPage() {
 
       <section className="mt-4 rounded-3xl border border-line bg-surface p-5">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
-          Participantes · {data.participant_count}
+          Quem está na cena · {data.participant_count}
         </h2>
         {data.participants.length === 0 ? (
           <p className="mt-2 text-sm text-ink-faint">Ninguém por aqui ainda.</p>
