@@ -683,40 +683,31 @@ def social_group_formation(session: Session, moment: datetime) -> tuple[int, lis
 
 
 def spontaneous_group_activity(session: Session, moment: datetime) -> tuple[int, list[str]]:
-    """Um círculo social pode transformar convivência em uma atividade concreta."""
+    """Cria atividades espontâneas a partir de círculos sociais, sem locais ou horários."""
     npcs = session.exec(select(Character).where(Character.is_npc.is_(True))).all()
-    by_location: dict[int, list[Character]] = {}
+    groups: dict[int, list[Character]] = {}
     for npc in npcs:
-        if npc.current_location_id is not None:
-            by_location.setdefault(npc.current_location_id, []).append(npc)
+        if npc.id is not None:
+            groups.setdefault(npc.id % 5, []).append(npc)
     actions, highlights = 0, []
-    for location_id, people in by_location.items():
-        group = [p for p in people if p.id is not None]
+    for group_id, people in groups.items():
+        group = sorted(
+            [p for p in people if p.id is not None],
+            key=lambda p: _social_personality(p)[0],
+            reverse=True,
+        )[:4]
         if len(group) < 3:
             continue
-        group = sorted(group, key=lambda p: _social_personality(p)[0], reverse=True)[:4]
         host = group[0]
-        if host.id is None:
+        marker = key("group-activity", group_id, host.id, moment.date())
+        if already(session, host.id, marker):
             continue
-        recent = session.exec(
-            select(Event).where(
-                Event.location_id == location_id,
-                Event.host_character_id == host.id,
-                Event.kind == "ambient",
-                Event.created_at >= moment - timedelta(days=2),
-            ).limit(1)
-        ).first()
-        marker = key("group-activity", location_id, host.id, moment.date())
-        if recent is not None or already(session, host.id, marker):
+        if score(f"group-activity:{group_id}:{host.id}:{moment.date()}") > 0.24:
             continue
-        if score(f"group-activity:{location_id}:{host.id}:{moment.date()}") > 0.24:
-            continue
-        location = session.get(Location, location_id)
-        title = f"Encontro espontâneo em {location.name if location else 'um lugar conhecido'}"
         event = Event(
-            title=title,
-            description="Um pequeno grupo resolveu transformar a convivência em um encontro. Quem aparecer pode entrar na cena.",
-            location_id=location_id,
+            title=f"Encontro espontâneo de {host.name}",
+            description="Um pequeno grupo resolveu transformar a convivência em uma situação. Quem aceitar pode entrar na cena.",
+            location_id=None,
             host_character_id=host.id,
             created_by="system",
             scheduled_at=None,
@@ -727,16 +718,17 @@ def spontaneous_group_activity(session: Session, moment: datetime) -> tuple[int,
         session.add(event)
         session.commit()
         session.refresh(event)
-        for participant in group:
-            if participant.id == host.id:
-                continue
-            session.add(EventParticipant(event_id=event.id, character_id=participant.id, status="INVITED"))
+        for participant in group[1:]:
+            session.add(EventParticipant(
+                event_id=event.id,
+                character_id=participant.id,
+                status="INVITED",
+            ))
         session.commit()
-        remember(session, host, None, f"Convidei algumas pessoas para um encontro espontâneo em {location.name if location else 'um lugar conhecido'}.", "group_activity", marker, moment, 34)
+        remember(session, host, None, "Convidei algumas pessoas para um encontro espontâneo.", "group_activity", marker, moment, 34)
         actions += 1
         highlights.append(f"{host.name} criou um encontro espontâneo")
     return actions, highlights[:5]
-
 
 def memory_consolidation(session: Session, moment: datetime) -> tuple[int, list[str]]:
     """Memórias repetidas são resumidas em uma lembrança mais importante, sem nova tabela."""
