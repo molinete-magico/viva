@@ -165,7 +165,7 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
             elapsed_minutes=elapsed,
             summary=summary[:2000],
             payload={
-                "payments": economy["payments"][:20],
+                "social": social + future_social,
                 "social": social + future_social,
                 "elapsed_minutes": elapsed,
             },
