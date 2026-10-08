@@ -69,6 +69,7 @@ def build_post_prompt(
     npc_personality: dict,
     npc_hobbies: list,
     world: dict,
+    recent_context: str = "",
 ) -> tuple[str, str]:
     hobbies = ", ".join(npc_hobbies) or "coisas simples da cidade"
     system_prompt = (
@@ -90,11 +91,13 @@ def build_post_prompt(
         "- Hashtags não são permitidas. Emojis são opcionais e no máximo 1.\n"
         "- Não use fórmulas de post inspiracional, salvo se forem realmente características do personagem.\n"
         "- Não mencione sistema, IA, prompt ou regras.\n\n"
-        "Escreva entre 4 e 30 palavras. Uma única frase é perfeitamente válida."
+        "Escreva entre 4 e 40 palavras. Uma única frase é perfeitamente válida.\n"
+        "O post deve nascer de algum detalhe concreto do contexto quando houver um: uma pessoa, conversa, hobby, rotina, acontecimento ou publicação recente. Não force esse detalhe se não fizer sentido."
     )
     user_prompt = (
         f"Hora em Vila Serena: {world.get('day_name', '')}, dia {world.get('date', '')} às {world.get('time', '')}.\n"
-        "Publique o que essa pessoa teria vontade de colocar na timeline agora."
+        f"Contexto recente dessa pessoa e da cidade:\n{recent_context or 'Nenhum acontecimento recente relevante.'}\n\n"
+        "Publique o que essa pessoa teria vontade de colocar na timeline agora. O post não precisa explicar o contexto; basta parecer que nasceu dele."
     )
     return system_prompt, user_prompt
 
