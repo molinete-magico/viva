@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../services/api'
 import { ErrorState, Spinner, useFetch, WarningBanner } from '../../components/ui'
-import type { CatchUpReport, CityPulse, Listing, SimulationLog, World } from '../../types/api'
+import type { CatchUpReport, CityPulse, Listing, SimulationLog } from '../../types/api'
 
 export function WorldPage() {
   const report = useFetch<Listing<SimulationLog>>('/world/catchup-report')
@@ -101,7 +101,7 @@ export function WorldPage() {
       </section>
 
       <section className="mt-4 rounded-2xl border border-line bg-surface p-4">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Relatório do tempo</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Diário da cidade</h2>
         {report.loading ? (
           <Spinner label="Lendo o diário da vila" />
         ) : (report.data?.items.length ?? 0) === 0 ? (
