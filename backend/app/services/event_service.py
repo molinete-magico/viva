@@ -11,6 +11,7 @@ from app.llm.factory import get_provider
 from app.llm.scenes import generate_outcome_summary, generate_scene
 from app.models import (
     Character,
+    Conversation,
     Event,
     EventOutcome,
     EventParticipant,
