@@ -10,7 +10,6 @@ class AdminCharacterUpdate(BaseModel):
     profession_label: str | None = Field(default=None, max_length=120)
     is_npc: bool | None = None
     discovered_level: int | None = Field(default=None, ge=1, le=3)
-    money: float | None = Field(default=None, ge=0)
     current_location_id: int | None = None
     personality: dict | None = None
     communication_style: str | None = None
