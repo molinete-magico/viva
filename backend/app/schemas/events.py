@@ -19,7 +19,6 @@ class EventOut(BaseModel):
 class CreateEventRequest(BaseModel):
     title: str = Field(min_length=2, max_length=200)
     description: str = Field(default="", max_length=4000)
-    location_id: int
     kind: str = Field(default="social", max_length=32)
     invite_conversation_ids: list[int] = Field(default_factory=list)
 
