@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../services/api'
 import { EmptyState, ErrorState, Spinner, useFetch, WarningBanner } from '../../components/ui'
-import type { EventItem, Listing, Location } from '../../types/api'
+import type { Conversation, EventItem, Listing, Location } from '../../types/api'
 
 const STATUS_LABELS: Record<string, string> = {
   SCHEDULED: 'Disponível',
