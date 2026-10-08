@@ -82,6 +82,8 @@ def build_scene_prompt(
         '"actions": [{"id": "...", "label": "...", "effects": {"memory": "...", "memory_importance": 20}, "hint": "..."}], '
         '"flags": {"complete": false}}\n\n'
         "NATURALIDADE:\n"
+        "- Nunca copie, cite ou parafraseie literalmente a ação do jogador dentro de narrative ou dialogue.\n"
+        "- A ação do jogador já aparece separada na interface; descreva apenas a reação do mundo e dos outros personagens.\n"
         "- A narrativa descreve somente o que está acontecendo na cena. Não narre pensamentos, sentimentos ou "
         "decisões do jogador como se fossem fatos; deixe isso para o jogador.\n"
         "- Evite frases genéricas quando não houver um detalhe concreto.\n"
