@@ -61,7 +61,7 @@ export function EventsPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="font-display text-xl font-semibold text-ink">Atividades</h1>
+        <h1 className="font-display text-xl font-semibold text-ink">Situações</h1>
         <div className="flex gap-2">
           <button
             type="button"
@@ -70,14 +70,14 @@ export function EventsPage() {
               onlyMine ? 'bg-accent-soft text-accent-deep' : 'bg-surface text-ink-soft'
             }`}
           >
-            Meus
+            Minhas
           </button>
           <button
             type="button"
             onClick={() => setShowCreate((v) => !v)}
             className="tap rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
           >
-            {showCreate ? 'Fechar' : 'Criar cena'}
+            {showCreate ? 'Fechar' : 'Criar situação'}
           </button>
         </div>
       </div>
@@ -92,22 +92,22 @@ export function EventsPage() {
             createEvent()
           }}
         >
-          <h2 className="text-sm font-semibold text-ink">Criar uma atividade</h2>
+          <h2 className="text-sm font-semibold text-ink">Criar uma situação</h2>
           <input
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
-            placeholder="Título do evento"
+            placeholder="O que está acontecendo?"
             className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
           />
           <textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
-            placeholder="Do que se trata (opcional)"
+            placeholder="Conte o que está rolando (opcional)"
             rows={2}
             className="w-full resize-none rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
           />
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">Convidar moradores</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">Quem você quer chamar?</p>
             {conversations.loading ? (
               <p className="text-xs text-ink-faint">Carregando conversas…</p>
             ) : conversations.error ? (
