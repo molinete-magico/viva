@@ -31,7 +31,7 @@ export function EventPage() {
   if (!event.data) return null
 
   const data = event.data
-  const open = ['SCHEDULED', 'OPEN', 'ACTIVE'].includes(data.status)
+  const open = ['OPEN', 'ACTIVE'].includes(data.status)
 
   async function rsvp(accept: boolean) {
     setBusy(true)
