@@ -628,20 +628,8 @@ def get_outcome(session: Session, character: Character, session_id: int) -> Even
 
 
 def check_open_events(session: Session, current: datetime) -> None:
-    events = session.exec(
-        select(Event).where(
-            Event.status == de.EVENT_SCHEDULED,
-            Event.scheduled_at <= current,
-        )
-    ).all()
-    changed = 0
-    for event in events:
-        event.status = de.EVENT_OPEN
-        session.add(event)
-        changed += 1
-    if changed:
-        session.commit()
-
+    """Compatibilidade com o catch-up antigo; atividades já nascem abertas."""
+    return
 
 def recover_stale_event_sessions(session: Session, *, max_idle_minutes: int = 24 * 60) -> int:
     """Sessões de evento dormindo além do limite são arquivadas (abandon).
