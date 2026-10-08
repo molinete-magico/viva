@@ -187,7 +187,8 @@ def build_scene_prompt(
         "Os efeitos devem representar somente consequências plausíveis e pequenas; não invente autoridade sobre o mundo.\n"
         "ENCERRAMENTO: use flags.complete=true somente quando a situação realmente tiver terminado, perdido o propósito "
         "ou o jogador tiver decidido sair. Uma conversa ainda pode continuar indefinidamente."
-    )    user_prompt = (
+    )
+    user_prompt = (
         f"Contexto: {chronology}.\n"
         f"Jogador: {player_name}. Anfitrião: {host_name}.\n\n"
         f"HISTÓRICO COMPLETO RECENTE:\n{history}\n\n"
