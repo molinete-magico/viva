@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from sqlmodel import Session, select
 
 from app.api.deps import get_admin_user
@@ -6,6 +6,7 @@ from app.database.session import get_session
 from app.domain.errors import ServiceError
 from app.models import (
     Character,
+    CharacterPhoto,
     District,
     Job,
     Location,
@@ -29,7 +30,7 @@ from app.services.simulation_service import run_catchup
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
-def _char_out(c: Character) -> dict:
+def _char_out(c: Character, photo_url: str | None = None) -> dict:
     return {
         "id": c.id,
         "name": c.name,
@@ -40,6 +41,7 @@ def _char_out(c: Character) -> dict:
         "discovered_level": c.discovered_level,
         "money": c.money,
         "current_location_id": c.current_location_id,
+        "photo_url": photo_url,
         "communication_style": c.communication_style,
         "personality": c.personality,
     }
@@ -51,7 +53,8 @@ def list_characters(
     session: Session = Depends(get_session),
 ):
     rows = session.exec(select(Character).order_by(Character.id)).all()
-    return Listing(items=[_char_out(c) for c in rows])
+    photos = {p.character_id: p.path for p in session.exec(select(CharacterPhoto).where(CharacterPhoto.character_id.in_([c.id for c in rows]))).all()}
+    return Listing(items=[_char_out(c, photos.get(c.id)) for c in rows])
 
 
 @router.post("/characters", response_model=dict, status_code=201)
@@ -74,6 +77,21 @@ def create_character(
     session.commit()
     session.refresh(character)
     return _char_out(character)
+
+
+@router.post("/characters/{character_id}/photo", response_model=dict)
+def set_npc_photo(character_id: int, data: dict = Body(...), user: User = Depends(get_admin_user), session: Session = Depends(get_session)):
+    import secrets
+    from app.config import DATA_DIR
+    character = session.get(Character, character_id)
+    if character is None:
+        raise ServiceError("Personagem não encontrado.", 404)
+    from app.services.character_service import set_character_photo
+    try:
+        url = set_character_photo(session, character, str(data.get("data") or ""), DATA_DIR / "photos", f"character-{character.id}-{secrets.token_hex(6)}")
+    except ValueError as exc:
+        raise ServiceError(str(exc), 400) from exc
+    return {"photo_url": url}
 
 
 @router.patch("/characters/{character_id}", response_model=dict)
