@@ -268,7 +268,6 @@ export interface CityPulseEvent {
   id: number
   title: string
   status: string
-  scheduled_at: string
   host_name: string
 }
 
