@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 
 from app.llm import LLMError, get_provider
 from app.llm.prompts import build_comment_prompt, build_post_prompt, complete_with_timeout
-from app.models import Character, Follow, Post, WorldState
+from app.models import Character, Follow, Memory, Post, WorldState
 
 
 def generate_npc_post(session: Session, npc: Character, *, simulated_at: datetime | None = None) -> Post:
@@ -21,12 +21,37 @@ def generate_npc_post(session: Session, npc: Character, *, simulated_at: datetim
         "time": world.current_time if world else "08:00",
         "day_name": _weekday(world.current_date.weekday()) if world else "",
     }
+    recent_memories = session.exec(
+        select(Memory)
+        .where(
+            Memory.owner_character_id == npc.id,
+            Memory.occurred_at.is_not(None),
+        )
+        .order_by(Memory.occurred_at.desc())
+        .limit(6)
+    ).all()
+    recent_posts = session.exec(
+        select(Post)
+        .where(Post.author_character_id == npc.id)
+        .order_by(Post.created_at.desc())
+        .limit(3)
+    ).all()
+    context_lines: list[str] = []
+    for memory in recent_memories:
+        other = session.get(Character, memory.other_character_id) if memory.other_character_id else None
+        subject = f" com {other.name}" if other else ""
+        context_lines.append(f"Memória recente{subject}: {memory.content}")
+    for previous in recent_posts:
+        context_lines.append(f"Post recente: {previous.content}")
+    recent_context = "\n".join(context_lines[:9])
+
     system_prompt, user_prompt = build_post_prompt(
         npc_name=npc.name,
         npc_role=npc.profession_label or "morador(a) da Vila Serena",
         npc_personality=npc.personality,
         npc_hobbies=npc.hobbies,
         world=world_payload,
+        recent_context=recent_context,
     )
     text = asyncio.run(
         complete_with_timeout(
