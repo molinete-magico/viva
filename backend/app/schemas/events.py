@@ -7,7 +7,7 @@ class EventOut(BaseModel):
     id: int
     title: str
     description: str
-    scheduled_at: datetime
+    scheduled_at: datetime | None = None
     status: str
     kind: str
     location_id: int
@@ -23,7 +23,7 @@ class CreateEventRequest(BaseModel):
     title: str = Field(min_length=2, max_length=200)
     description: str = Field(default="", max_length=4000)
     location_id: int
-    scheduled_at: datetime
+    scheduled_at: datetime | None = None
     kind: str = Field(default="social", max_length=32)
     invitees: list[int] = Field(default_factory=list)
 
