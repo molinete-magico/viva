@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, status
-from sqlmodel import Session
+from fastapi import APIRouter, Body, Depends, status
+from sqlmodel import Session, select
 
 from app.api.deps import get_current_user
 from app.database.session import get_session
-from app.models import User
+from app.models import CharacterPhoto, User
 from app.schemas.character import CharacterDetailOut, CreateCharacterRequest, character_detail_out
 from app.schemas.common import Listing
 from app.schemas.auth import CharacterOut, character_out
@@ -109,3 +109,16 @@ def unfollow_character(
     actor = character_service.require_active_character(session, user)
     social_service.unfollow_character(session, actor, character_id)
     return FollowOut(following=False, followers_count=social_service.follower_count(session, character_id))
+
+@router.post("/me/photo", response_model=dict)
+def set_my_photo(data: dict = Body(...), user: User = Depends(get_current_user), session: Session = Depends(get_session)):
+    import secrets
+    from app.config import DATA_DIR
+    character = character_service.require_active_character(session, user)
+    from app.services.character_service import set_character_photo
+    try:
+        url = set_character_photo(session, character, str(data.get("data") or ""), DATA_DIR / "photos", f"character-{character.id}-{secrets.token_hex(6)}")
+    except ValueError as exc:
+        from app.domain.errors import ServiceError
+        raise ServiceError(str(exc), 400) from exc
+    return {"photo_url": url}
