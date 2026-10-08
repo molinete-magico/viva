@@ -72,7 +72,7 @@ export function NotificationsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-5">
+    <div className="mx-auto max-w-2xl">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-xl font-semibold text-ink">Notificações</h1>
         {(notifications.data?.items.length ?? 0) > 0 && (
@@ -94,7 +94,7 @@ export function NotificationsPage() {
       ) : (notifications.data?.items.length ?? 0) === 0 ? (
         <EmptyState title="Nada de novidade ainda." hint="Convites, curtidas e recados aparecem aqui." />
       ) : (
-        <ul className="mt-4 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+        <ul className="mt-4 divide-y divide-line border-y border-line bg-surface">
           {notifications.data?.items.map((notification) => {
             const target = targetOf(notification)
             const isUnread = !notification.read_at
