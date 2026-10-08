@@ -112,18 +112,17 @@
 }
 
 
-/* VIVA visual system: social-first, editorial, high-contrast. */
-.viva-shell {
-  background-image: radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--viva-accent) 7%, transparent), transparent 28rem), radial-gradient(circle at 100% 30%, color-mix(in srgb, var(--viva-ink) 3%, transparent), transparent 30rem);
-}
-.viva-panel { box-shadow: var(--viva-shadow); }
+/* VIVA visual system: simple, social, editorial. Avoid decorative UI chrome. */
+.viva-shell { background: var(--viva-paper); }
+.viva-panel { box-shadow: none; }
 .viva-divider { border-color: var(--viva-line); }
-.viva-avatar { box-shadow: 0 0 0 3px var(--viva-surface), 0 0 0 4px var(--viva-line); }
-.viva-kicker { letter-spacing: .14em; text-transform: uppercase; font-size: .68rem; font-weight: 750; }
-.viva-post { border-radius: 1.15rem; transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease; }
-.viva-post:hover { background: color-mix(in srgb, var(--viva-surface) 92%, var(--viva-paper)); }
-.viva-action { min-height: 2.5rem; border-radius: 999px; }
-.viva-profile-cover { background: linear-gradient(135deg, color-mix(in srgb, var(--viva-accent) 26%, var(--viva-paper)), color-mix(in srgb, var(--viva-ink) 8%, var(--viva-paper)) 55%, var(--viva-paper)); }
+.viva-avatar { box-shadow: 0 0 0 1px var(--viva-line); }
+.viva-kicker { letter-spacing: .08em; text-transform: uppercase; font-size: .68rem; font-weight: 700; }
+.viva-post { border-radius: 0; transition: background-color 120ms ease; }
+.viva-post:hover { background: color-mix(in srgb, var(--viva-surface) 65%, var(--viva-paper)); }
+.viva-action { min-height: 2.5rem; border-radius: .35rem; }
+.viva-profile-cover { background: var(--viva-ink); }
 .viva-grid-noise { position: relative; overflow: hidden; }
-.viva-grid-noise::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .22; background-image: linear-gradient(var(--viva-line) 1px, transparent 1px), linear-gradient(90deg, var(--viva-line) 1px, transparent 1px); background-size: 28px 28px; mask-image: linear-gradient(to bottom, black, transparent 75%); }
-.field{width:100%;border:1px solid var(--line);border-radius:.75rem;background:var(--paper);padding:.6rem .75rem;font-size:.875rem;color:var(--ink);outline:none}.field:focus{border-color:var(--accent)}
+.viva-grid-noise::after { display: none; }
+.field { width:100%; border:1px solid var(--viva-line); border-radius:.35rem; background:var(--viva-surface); padding:.65rem .75rem; font-size:.875rem; color:var(--viva-ink); outline:none; }
+.field:focus { border-color:var(--viva-accent); }
