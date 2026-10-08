@@ -30,14 +30,14 @@ export function SettingsPage() {
       <section className="mt-4 rounded-2xl border border-line bg-surface p-5">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Simulação</h2>
         <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-          Acompanhe o relógio da cidade, as rotinas dos moradores e os marcos da sua história na Vila Serena.
+          Veja o que os moradores estão fazendo, descubra novas cenas e acompanhe relações, memórias e consequências sociais.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Link
             to="/world"
             className="tap rounded-full border border-line bg-paper px-4 py-2 text-sm font-medium text-ink transition hover:border-accent/40"
           >
-            Relógio da cidade
+            Vida da cidade
           </Link>
           <Link
             to="/settings/world/relationships"
