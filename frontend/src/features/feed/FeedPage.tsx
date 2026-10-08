@@ -13,7 +13,7 @@ export function FeedPage() {
   const feed = useFetch<FeedResponse>(`/feed?scope=${scope}`, [scope])
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-5">
+    <div className="mx-auto max-w-2xl">
       {!character && (
         <Link
           to="/onboarding"
@@ -28,13 +28,13 @@ export function FeedPage() {
 
       {character && <Composer onPosted={feed.reload} />}
 
-      <div className="mt-3 grid grid-cols-4 rounded-2xl border border-line bg-surface/80 p-1 backdrop-blur">
+      <div className="mt-0 grid grid-cols-4 border-b border-line">
         <button
           type="button"
           onClick={() => setScope('all')}
           aria-pressed={scope === 'all'}
-          className={`rounded-xl px-3 py-2 text-xs font-bold transition sm:text-sm ${
-            scope === 'all' ? 'bg-accent text-white' : 'text-ink-soft hover:text-ink'
+          className={`border-b-2 border-transparent px-3 py-3 text-xs font-bold transition sm:text-sm ${
+            scope === 'all' ? 'border-accent text-ink' : 'text-ink-soft hover:text-ink'
           }`}
         >
           Tudo
@@ -43,7 +43,7 @@ export function FeedPage() {
           type="button"
           onClick={() => setScope('for_you')}
           aria-pressed={scope === 'for_you'}
-          className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
+          className={`flex-1 border-b-2 border-transparent px-4 py-3 text-sm font-medium transition ${
             scope === 'for_you' ? 'bg-accent text-white' : 'text-ink-soft hover:text-ink'
           }`}
         >
@@ -85,7 +85,7 @@ export function FeedPage() {
           }
         />
       ) : (
-        <ul className="mt-3 space-y-3">
+        <ul className="divide-y divide-line">
           {feed.data?.items.map((post) => (
             <li key={post.id}>
               <PostCard post={post} currentCharacterId={character?.id} onChanged={feed.reload} />
@@ -119,7 +119,7 @@ function Composer({ onPosted }: { onPosted: () => void }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="viva-panel mb-4 rounded-3xl border border-line bg-surface p-5">
+    <form onSubmit={onSubmit} className="border-b border-line px-4 py-5">
       <label className="sr-only" htmlFor="composer">
         O que está acontecendo?
       </label>
@@ -141,7 +141,7 @@ function Composer({ onPosted }: { onPosted: () => void }) {
         <button
           type="submit"
           disabled={submitting || !content.trim()}
-          className="tap rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white transition hover:bg-accent-deep disabled:opacity-50"
+          className="tap border border-accent bg-accent px-5 py-2 text-sm font-semibold text-white transition hover:bg-accent-deep disabled:opacity-50"
         >
           {submitting ? 'Publicando…' : 'Publicar'}
         </button>
