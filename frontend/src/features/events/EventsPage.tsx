@@ -133,7 +133,7 @@ export function EventsPage() {
                         />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-ink">{conversation.partner.name}</p>
-                          <p className="text-[11px] text-ink-faint">Conversa #{conversation.id}</p>
+                          <p className="text-[11px] text-ink-faint">Será convidado para esta situação</p>
                         </div>
                       </label>
                     </li>
@@ -142,7 +142,7 @@ export function EventsPage() {
               </ul>
             )}
             <p className="mt-2 text-[11px] text-ink-faint">
-              O convite usa o ID da conversa por baixo; o nome é apenas para facilitar a escolha.
+              Escolha as pessoas com quem você já conversa. Elas recebem o convite para entrar na situação.
             </p>
           </div>
           <button
