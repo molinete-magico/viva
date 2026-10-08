@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, time, timedelta, timezone
 
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.domain import events as de
@@ -125,6 +126,7 @@ def create_event(session: Session, host: Character, req: CreateEventRequest) -> 
         created_by="system" if host.is_npc else "player",
         scheduled_at=None,
         kind=req.kind,
+        max_participants=6,
     )
     session.add(event)
     session.commit()
@@ -232,6 +234,15 @@ def _assert_playable(session: Session, character: Character, event: Event) -> Ev
         de.PARTICIPANT_JOINED,
     ):
         raise ServiceError("Confirme presença no evento antes de entrar.", 403)
+    if participant.status != de.PARTICIPANT_JOINED and event.max_participants:
+        joined_count = session.exec(
+            select(EventParticipant.id).where(
+                EventParticipant.event_id == event.id,
+                EventParticipant.status.in_([de.PARTICIPANT_ACCEPTED, de.PARTICIPANT_JOINED]),
+            )
+        ).all()
+        if len(joined_count) >= event.max_participants:
+            raise ServiceError("A atividade já está cheia.", 409)
     return participant
 
 
@@ -286,7 +297,17 @@ def start_or_resume_session(session: Session, character: Character, event_id: in
         event.status = de.transition_event(event.status, "start")
     session.add(event_session)
     session.add(event)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        existing = session.exec(select(EventSession).where(
+            EventSession.event_id == event_id,
+            EventSession.player_character_id == character.id,
+        )).first()
+        if existing is not None and existing.status == de.SESSION_ACTIVE:
+            return existing
+        raise ServiceError("Não foi possível iniciar a atividade agora. Tente novamente.", 409)
     session.refresh(event_session)
     scene = _scene(session, character, event, event_session, last_action=None)
     _make_turn(session, event_session, turn_index=0, player_action_id=None, player_action_label=None, scene=scene)
