@@ -5,7 +5,6 @@ import { EmptyState, ErrorState, Spinner, useFetch, WarningBanner } from '../../
 import type { Conversation, EventItem, Listing } from '../../types/api'
 
 const STATUS_LABELS: Record<string, string> = {
-  SCHEDULED: 'Disponível',
   OPEN: 'Aberto',
   ACTIVE: 'Em andamento',
   COMPLETED: 'Encerrado',
