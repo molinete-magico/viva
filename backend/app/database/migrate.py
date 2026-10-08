@@ -25,6 +25,8 @@ def _ensure_event_location_nullable() -> None:
     engine = create_engine(settings.database_url)
     try:
         inspector = inspect(engine)
+        if "events" not in inspector.get_table_names():
+            return
         columns = {column["name"]: column for column in inspector.get_columns("events")}
         location = columns.get("location_id")
         if location is None or location.get("nullable", True):
