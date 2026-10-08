@@ -1,141 +1,16 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { ApiError, api } from '../../services/api'
 import { Avatar, ErrorState, Spinner, useFetch } from '../../components/ui'
 import { PostCard } from '../feed/PostCard'
 import type { CharacterDetail, FeedResponse, FollowOut } from '../../types/api'
-
-const LEVEL_LABELS: Record<number, string> = {
-  1: 'rosto novo na cidade',
-  2: 'um conhecido para você',
-  3: 'amigo da Vila Serena',
-}
-
-export function OwnProfileRedirect() {
-  const { character, loading } = useAuth()
-  if (loading) return <Spinner label="Abrindo seu perfil" />
-  if (!character) return <Navigate to="/onboarding" replace />
-  return <Navigate to={`/profile/${character.id}`} replace />
-}
-
-export function ProfilePage() {
-  const { characterId } = useParams()
-  const navigate = useNavigate()
-  const { character: ownCharacter } = useAuth()
-  const numericId = Number(characterId)
-  const detail = useFetch<CharacterDetail>(`/characters/${numericId}`, [characterId])
-  const posts = useFetch<FeedResponse>(`/characters/${numericId}/posts`, [characterId])
-  const [followBusy, setFollowBusy] = useState(false)
-  const [dmBusy, setDmBusy] = useState(false)
-
-  if (!Number.isFinite(numericId)) return <Navigate to="/feed" replace />
-
-  if (detail.loading) return <Spinner label="Carregando perfil" />
-  if (detail.error) return <ErrorState message={detail.error} onRetry={detail.reload} />
-  if (!detail.data) return <ErrorState message="Perfil não encontrado." />
-
-  const person = detail.data
-
-  async function toggleFollow() {
-    if (followBusy || !ownCharacter) return
-    setFollowBusy(true)
-    try {
-      if (person.is_following) {
-        const result = await api<FollowOut>(`/characters/${person.id}/follow`, { method: 'DELETE' })
-        if (!result.following) detail.reload()
-      } else {
-        const result = await api<FollowOut>(`/characters/${person.id}/follow`, { method: 'POST' })
-        if (result.following) detail.reload()
-      }
-    } catch (err) {
-      alert(err instanceof ApiError ? err.message : 'Não rolou. Tente de novo.')
-    } finally {
-      setFollowBusy(false)
-    }
-  }
-
-  async function startDm() {
-    if (dmBusy || !ownCharacter) return
-    setDmBusy(true)
-    try {
-      const conversation = await api<{ id: number }>(`/characters/${person.id}/dm`, { method: 'POST' })
-      navigate(`/messages/${conversation.id}`)
-    } catch (err) {
-      alert(err instanceof ApiError ? err.message : 'Não rolou. Tente de novo.')
-    } finally {
-      setDmBusy(false)
-    }
-  }
-
-  return (
-    <div className="mx-auto max-w-3xl px-4 py-6 lg:px-0">
-      <section className="viva-panel overflow-hidden rounded-3xl border border-line bg-surface">
-        <div className="viva-profile-cover viva-grid-noise h-28 sm:h-36" />
-        <div className="relative px-5 pb-6 sm:px-7">
-          <div className="-mt-10 flex items-end justify-between gap-4">
-            <div className="viva-avatar rounded-full">
-              <Avatar name={person.name} size="lg" photoUrl={person.photo_url} />
-            </div>
-            {!person.is_me && ownCharacter && (
-              <div className="flex gap-2">
-                <button type="button" onClick={toggleFollow} disabled={followBusy} className={`tap rounded-full border px-5 text-sm font-bold transition disabled:opacity-50 ${person.is_following ? 'border-line bg-surface text-ink hover:border-accent/40' : 'border-accent bg-accent text-white hover:bg-accent-deep'}`}>
-                  {followBusy ? '…' : person.is_following ? 'Seguindo' : 'Seguir'}
-                </button>
-                {person.is_npc && (
-                  <button type="button" onClick={startDm} disabled={dmBusy} className="tap rounded-full border border-line bg-surface px-4 text-sm font-bold text-ink transition hover:border-accent/40 disabled:opacity-50">
-                    {dmBusy ? 'Abrindo…' : 'Mensagem'}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="mt-4">
-            <p className="viva-kicker text-accent">{person.is_npc ? 'Morador da cidade' : 'Perfil'}</p>
-            <h1 className="mt-1 font-display text-3xl font-black tracking-tight text-ink">{person.name}</h1>
-            <p className="mt-1 text-sm text-ink-soft">
-              {person.profession_label || 'morador'}{person.pronouns ? ` · ${person.pronouns}` : ''} · {person.age} anos
-            </p>
-            {person.is_npc && (
-              <p className="mt-2 inline-flex rounded-full bg-sea-soft px-2.5 py-1 text-[11px] font-medium text-sea">
-                {LEVEL_LABELS[person.discovered_level] ?? 'rosto novo na cidade'}
-              </p>
-            )}
-          </div>
-          {person.bio && <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink">{person.bio}</p>}
-          <dl className="mt-5 grid grid-cols-3 border-y border-line py-4">
-            <div><dt className="text-xs text-ink-soft">Posts</dt><dd className="mt-1 text-lg font-bold text-ink">{person.stats.posts}</dd></div>
-            <div><dt className="text-xs text-ink-soft">Seguidores</dt><dd className="mt-1 text-lg font-bold text-ink">{person.stats.followers}</dd></div>
-            <div><dt className="text-xs text-ink-soft">Seguindo</dt><dd className="mt-1 text-lg font-bold text-ink">{person.stats.following}</dd></div>
-          </dl>
-        </div>
-      </section>
-
-      {person.is_me && (
-        <div className="mt-4 space-y-3">
-          {person.hobbies.length > 0 && (
-            <div className="rounded-2xl border border-line bg-surface p-4">
-              <h2 className="viva-kicker text-ink-soft">Seus interesses</h2>
-              <ul className="mt-3 flex flex-wrap gap-2">
-                {person.hobbies.map((hobby) => <li key={hobby} className="rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent-deep">{hobby}</li>)}
-              </ul>
-            </div>
-          )}
-          {person.money !== null && <p className="rounded-2xl border border-line bg-surface px-4 py-3 text-sm text-ink-soft">No bolso: <strong className="text-ink">R$ {person.money.toFixed(2).replace('.', ',')}</strong></p>}
-          <Link to="/settings" className="tap inline-flex items-center rounded-full border border-line bg-surface px-5 text-sm font-medium text-ink transition hover:border-accent/40">Configurações</Link>
-        </div>
-      )}
-
-      <section className="mt-8">
-        <h2 className="viva-kicker text-ink-soft">Publicações</h2>
-        {posts.loading ? <Spinner label="Carregando publicações" /> :
-          posts.error ? <ErrorState message={posts.error} onRetry={posts.reload} /> :
-          (posts.data?.items.length ?? 0) === 0 ? (
-            <p className="mt-3 rounded-2xl border border-line bg-surface px-4 py-8 text-center text-sm text-ink-faint">{person.is_me ? 'Você ainda não publicou nada.' : `${person.name} ainda não publicou nada.`}</p>
-          ) : (
-            <ul className="mt-3 space-y-2">{posts.data?.items.map((post) => <li key={post.id}><PostCard post={post} currentCharacterId={ownCharacter?.id} onChanged={posts.reload} /></li>)}</ul>
-          )}
-      </section>
-    </div>
-  )
-}
+const LEVEL_LABELS:Record<number,string>={1:'rosto novo na cidade',2:'um conhecido para você',3:'amigo da Vila Serena'}
+export function OwnProfileRedirect(){const{character,loading}=useAuth();if(loading)return <Spinner label="Abrindo seu perfil"/>;if(!character)return <Navigate to="/onboarding" replace/>;return <Navigate to={`/profile/${character.id}`} replace/>}
+export function ProfilePage(){const{characterId}=useParams();const navigate=useNavigate();const{character:ownCharacter}=useAuth();const numericId=Number(characterId);const detail=useFetch<CharacterDetail>(`/characters/${numericId}`,[characterId]);const posts=useFetch<FeedResponse>(`/characters/${numericId}/posts`,[characterId]);const[followBusy,setFollowBusy]=useState(false);const[dmBusy,setDmBusy]=useState(false);const[editing,setEditing]=useState(false);const[saving,setSaving]=useState(false);const fileRef=useRef<HTMLInputElement>(null)
+if(!Number.isFinite(numericId))return <Navigate to="/feed" replace/>;if(detail.loading)return <Spinner label="Carregando perfil"/>;if(detail.error)return <ErrorState message={detail.error} onRetry={detail.reload}/>;if(!detail.data)return <ErrorState message="Perfil não encontrado."/>;const person=detail.data
+async function toggleFollow(){if(followBusy||!ownCharacter)return;setFollowBusy(true);try{const r=await api<FollowOut>(`/characters/${person.id}/follow`,{method:person.is_following?'DELETE':'POST'});if(r.following===!person.is_following)detail.reload()}catch(e){alert(e instanceof ApiError?e.message:'Não rolou.')}finally{setFollowBusy(false)}}
+async function startDm(){if(dmBusy||!ownCharacter)return;setDmBusy(true);try{const r=await api<{id:number}>(`/characters/${person.id}/dm`,{method:'POST'});navigate(`/messages/${r.id}`)}catch(e){alert(e instanceof ApiError?e.message:'Não rolou.')}finally{setDmBusy(false)}}
+async function saveProfile(){setSaving(true);try{await api<CharacterDetail>('/characters/me',{method:'PATCH',body:{name:person.name,age:person.age,pronouns:person.pronouns,bio:person.bio,profession_label:person.profession_label}});setEditing(false);detail.reload()}catch(e){alert(e instanceof ApiError?e.message:'Não foi possível salvar.')}finally{setSaving(false)}}
+async function uploadPhoto(file:File){if(!file.type.startsWith('image/')||file.size>5*1024*1024){alert('Use uma imagem de até 5 MB.');return}const data=await new Promise<string>((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result));r.onerror=()=>reject(new Error());r.readAsDataURL(file)});setSaving(true);try{await api('/characters/me/photo',{method:'POST',body:{data}});detail.reload()}catch(e){alert(e instanceof ApiError?e.message:'Não foi possível trocar a foto.')}finally{setSaving(false)}}
+return <div className="mx-auto max-w-3xl px-4 py-6 lg:px-0"><section className="viva-panel overflow-hidden rounded-3xl border border-line bg-surface"><div className="viva-profile-cover viva-grid-noise h-28 sm:h-36"/><div className="relative px-5 pb-6 sm:px-7"><div className="-mt-10 flex items-end justify-between gap-4"><div className="viva-avatar rounded-full"><Avatar name={person.name} size="lg" photoUrl={person.photo_url}/></div>{person.is_me?<div className="flex gap-2"><input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f)void uploadPhoto(f);e.currentTarget.value=''}}/><button type="button" onClick={()=>fileRef.current?.click()} className="tap rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold">Trocar foto</button><button type="button" onClick={()=>setEditing(v=>!v)} className="tap rounded-full bg-accent px-4 py-2 text-sm font-bold text-white">{editing?'Fechar edição':'Editar perfil'}</button></div>:ownCharacter&&<div className="flex gap-2"><button type="button" onClick={toggleFollow} disabled={followBusy} className="tap rounded-full bg-accent px-5 py-2 text-sm font-bold text-white">{followBusy?'…':person.is_following?'Seguindo':'Seguir'}</button>{person.is_npc&&<button type="button" onClick={startDm} disabled={dmBusy} className="tap rounded-full border border-line bg-surface px-4 py-2 text-sm font-bold">{dmBusy?'Abrindo…':'Mensagem'}</button>}</div>}</div><div className="mt-4"><p className="viva-kicker text-accent">{person.is_npc?'Morador da cidade':'Perfil'}</p><h1 className="mt-1 font-display text-3xl font-black text-ink">{person.name}</h1><p className="mt-1 text-sm text-ink-soft">{person.profession_label||'morador'}{person.pronouns?` · ${person.pronouns}`:''} · {person.age} anos</p>{person.is_npc&&<p className="mt-2 inline-flex rounded-full bg-sea-soft px-2.5 py-1 text-[11px] text-sea">{LEVEL_LABELS[person.discovered_level]??'rosto novo na cidade'}</p>}</div>{editing&&person.is_me&&<div className="mt-5 grid gap-3 rounded-2xl border border-line bg-paper p-4 sm:grid-cols-2"><input value={person.name} onChange={e=>person.name=e.target.value} className="field"/><input type="number" value={person.age} onChange={e=>person.age=Number(e.target.value)} className="field"/><input value={person.pronouns} onChange={e=>person.pronouns=e.target.value} placeholder="Pronomes" className="field"/><input value={person.profession_label} onChange={e=>person.profession_label=e.target.value} placeholder="Profissão" className="field"/><textarea value={person.bio} onChange={e=>person.bio=e.target.value} placeholder="Bio" rows={3} className="field sm:col-span-2"/><button type="button" disabled={saving} onClick={saveProfile} className="tap rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white sm:col-span-2">{saving?'Salvando…':'Salvar perfil'}</button></div>}{person.bio&&<p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink">{person.bio}</p>}<dl className="mt-5 grid grid-cols-3 border-y border-line py-4"><div><dt className="text-xs text-ink-soft">Posts</dt><dd className="mt-1 text-lg font-bold text-ink">{person.stats.posts}</dd></div><div><dt className="text-xs text-ink-soft">Seguidores</dt><dd className="mt-1 text-lg font-bold text-ink">{person.stats.followers}</dd></div><div><dt className="text-xs text-ink-soft">Seguindo</dt><dd className="mt-1 text-lg font-bold text-ink">{person.stats.following}</dd></div></dl></div></section>{person.is_me&&person.hobbies.length>0&&<div className="mt-4 rounded-2xl border border-line bg-surface p-4"><h2 className="viva-kicker text-ink-soft">Seus interesses</h2><ul className="mt-3 flex flex-wrap gap-2">{person.hobbies.map(h=><li key={h} className="rounded-full bg-accent-soft px-3 py-1.5 text-xs text-accent-deep">{h}</li>)}</ul></div>}<section className="mt-8"><h2 className="viva-kicker text-ink-soft">Publicações</h2>{posts.loading?<Spinner label="Carregando publicações"/>:posts.error?<ErrorState message={posts.error} onRetry={posts.reload}/>:!posts.data?.items.length?<p className="mt-3 rounded-2xl border border-line bg-surface px-4 py-8 text-center text-sm text-ink-faint">{person.is_me?'Você ainda não publicou nada.':`${person.name} ainda não publicou nada.`}</p>:<ul className="mt-3 space-y-2">{posts.data.items.map(p=><li key={p.id}><PostCard post={p} currentCharacterId={ownCharacter?.id} onChanged={posts.reload}/></li>)}</ul>}</section></div>}
