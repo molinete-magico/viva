@@ -118,7 +118,6 @@ async def generate_scene(
     provider,
     *,
     event_title: str,
-    location_name: str,
     host_name: str,
     participants: list[str],
     player_name: str,
