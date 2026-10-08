@@ -84,6 +84,22 @@ def _npc_participants(session: Session, event: Event, exclude_id: int | None = N
     return sorted(npcs, key=lambda c: order.get(c.id, 0))
 
 
+def _scene_participant_context(participants: list[Character], player_name: str) -> str:
+    lines: list[str] = []
+    for character in participants:
+        if character.name == player_name:
+            continue
+        personality = character.personality or {}
+        hobbies = ", ".join(str(x) for x in (character.hobbies or [])[:3]) or "nenhum interesse registrado"
+        likes = ", ".join(str(x) for x in (character.likes or [])[:3]) or "nenhuma preferência registrada"
+        style = character.communication_style or "fala de forma cotidiana"
+        lines.append(
+            f"- {character.name}: profissão={character.profession_label or 'morador'}; "
+            f"personalidade={personality}; interesses={hobbies}; gosta de={likes}; jeito de falar={style}."
+        )
+    return "\n".join(lines) or "- Não há outro participante conhecido; não invente um grupo de pessoas."
+
+
 def _scene_participant_names(participants: list[Character], player_name: str) -> list[str]:
     names = [c.name for c in participants]
     others = [n for n in names if n != player_name]
@@ -340,8 +356,10 @@ def _scene(
         generate_scene(
             get_provider(),
             event_title=event.title,
+            event_description=event.description,
             host_name=host.name if host else "o anfitrião",
             participants=_scene_participant_names(participants, character.name),
+            participant_context=_scene_participant_context(participants, character.name),
             player_name=character.name,
             chronology=chronology,
             narrative_so_far=narrative_so_far,
