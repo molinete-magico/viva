@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { api } from '../../services/api'
 import { EmptyState, ErrorState, Spinner, useFetch, WarningBanner } from '../../components/ui'
 import type { EventItem, Listing, Location } from '../../types/api'
-import { formatEventTime } from '../../utils/format'
 
 const STATUS_LABELS: Record<string, string> = {
   SCHEDULED: 'Disponível',
@@ -25,7 +24,6 @@ const emptyForm = {
   title: '',
   description: '',
   location_id: 0,
-  scheduled_at: '',
   invitees: '',
 }
 
@@ -44,7 +42,6 @@ export function EventsPage() {
     try {
       if (!form.title.trim()) throw new Error('Dê um título ao evento.')
       if (!form.location_id) throw new Error('Escolha onde vai rolar.')
-      if (!form.scheduled_at) throw new Error('Falta marcar data e hora.')
       const invitees = form.invitees
         .split(',')
         .map((v) => Number(v.trim()))
@@ -55,7 +52,6 @@ export function EventsPage() {
           title: form.title,
           description: form.description,
           location_id: form.location_id,
-          scheduled_at: new Date(form.scheduled_at).toISOString(),
           invitees,
         },
       })
@@ -118,25 +114,15 @@ export function EventsPage() {
             rows={2}
             className="w-full resize-none rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div>
             <select
               value={form.location_id}
               onChange={(e) => setForm({ ...form, location_id: Number(e.target.value) })}
-              className="rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
+              className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
             >
               <option value={0}>Onde?</option>
-              {(locations.data?.items ?? []).map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.name}
-                </option>
-              ))}
+              {(locations.data?.items ?? []).map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
             </select>
-            <input
-              type="datetime-local"
-              value={form.scheduled_at}
-              onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })}
-              className="rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
-            />
           </div>
           <input
             value={form.invitees}
@@ -175,8 +161,7 @@ export function EventsPage() {
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-ink-soft">
-                  {formatEventTime(event.scheduled_at)}
-                  {event.location_name ? ` · ${event.location_name}` : ''}
+                  {event.location_name ? `📍 ${event.location_name}` : 'Na cidade'}
                 </p>
                 {event.description && (
                   <p className="mt-2 text-sm leading-relaxed text-ink-soft">{event.description}</p>
