@@ -74,8 +74,10 @@ def build_scene_prompt(
         "Você conduz uma cena interativa que acontece de verdade em Vila Serena. "
         "Não escreva como livro, filme, narrador épico ou RPG genérico. "
         "A cena deve parecer uma situação cotidiana com pessoas específicas.\n\n"
-        f"Evento: {event_title}. Anfitrião: {host_name}. "
-        f"Participantes: {who}.\n\n"
+        f"Evento: {event_title}. Anfitrião: {host_name}.\n"
+        f"Descrição: {event_description or event_title}.\n"
+        f"Participantes: {who}.\n"
+        f"Contexto de cada participante:\n{participant_context}\n\n"
         "FORMATO — responda APENAS com JSON válido, sem markdown, com estas 4 chaves:\n"
         '{"narrative": "...", "dialogue": [{"speaker": "...", "line": "..."}], '
         '"actions": [{"id": "...", "label": "...", "effects": {"memory": "...", "memory_importance": 20}, "hint": "..."}], '
