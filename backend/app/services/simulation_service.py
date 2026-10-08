@@ -72,14 +72,10 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
     state = advance_world_time_session(session, elapsed)
     until_dt = _combine(state)
 
-    from app.services.economy_service import process_shifts_and_routines
-
-    economy = process_shifts_and_routines(session, from_dt, until_dt)
-
     from app.services.event_service import check_open_events, recover_stale_event_sessions
     from app.services.messaging_service import idle_conversation_sessions
 
-    check_open_events(session, until_dt)
+    check_open_events(session)
     stale_sessions = recover_stale_event_sessions(session)
     idle_sessions = idle_conversation_sessions(session)
     future_social = process_due_future_hooks(session, simulated_now=until_dt)
@@ -144,12 +140,7 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
             social.append("a atividade social ficou parcialmente indisponível nesta rodada")
 
     state.last_catchup_at = utcnow()
-    paid = sum(p["amount"] for p in economy["payments"])
     summary_parts = []
-    if economy["payments"]:
-        summary_parts.append(f"{len(economy['payments'])} turnos de trabalho pagos (R$ {paid:.0f} no total)")
-    if economy["locations"]:
-        summary_parts.append(f"{economy['locations']} moradores seguiram para seus lugares")
     if stale_sessions:
         summary_parts.append(f"{stale_sessions} sessão(ões) de evento antiga(s) arquivada(s) pelo tempo")
     if idle_sessions:
@@ -166,7 +157,6 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
             summary=summary[:2000],
             payload={
                 "social": social + future_social,
-                "social": social + future_social,
                 "elapsed_minutes": elapsed,
             },
         )
@@ -178,8 +168,8 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
         "elapsed_minutes": elapsed,
         "from": from_dt.isoformat(),
         "to": until_dt.isoformat(),
-        "payments": economy["payments"],
-        "locations": economy["locations"],
+        "payments": [],
+        "locations": 0,
         "social": social,
         "summary": summary,
     }
