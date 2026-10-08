@@ -58,7 +58,6 @@ def _extract_json(text: str) -> dict | None:
 def build_scene_prompt(
     *,
     event_title: str,
-    location_name: str,
     host_name: str,
     participants: list[str],
     player_name: str,
@@ -75,7 +74,7 @@ def build_scene_prompt(
         "Você conduz uma cena interativa que acontece de verdade em Vila Serena. "
         "Não escreva como livro, filme, narrador épico ou RPG genérico. "
         "A cena deve parecer uma situação cotidiana com pessoas específicas.\n\n"
-        f"Evento: {event_title}. Local: {location_name}. Anfitrião: {host_name}. "
+        f"Evento: {event_title}. Anfitrião: {host_name}. "
         f"Participantes: {who}.\n\n"
         "FORMATO — responda APENAS com JSON válido, sem markdown, com estas 4 chaves:\n"
         '{"narrative": "...", "dialogue": [{"speaker": "...", "line": "..."}], '
@@ -105,7 +104,7 @@ def build_scene_prompt(
         "Escreva narrative em 2 a 4 frases curtas e dialogue com 1 a 3 falas. Não faça monólogos."
     )
     user_prompt = (
-        f"Contexto: {chronology}, no {location_name}.\n"
+        f"Contexto: {chronology}.\n"
         f"Você é {player_name}. O anfitrião é {host_name}.\n"
         f"Cenas anteriores:\n{history}\n\n"
         f"Ação livre do jogador nesta rodada: {free_text_text}\n"
@@ -131,8 +130,7 @@ async def generate_scene(
 ) -> dict[str, Any]:
     system_prompt, user_prompt = build_scene_prompt(
         event_title=event_title,
-        location_name=location_name,
-        host_name=host_name,
+            host_name=host_name,
         participants=participants,
         player_name=player_name,
         chronology=chronology,
