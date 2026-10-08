@@ -88,3 +88,40 @@ def can_view_details(character: Character, is_me: bool) -> bool:
     if is_me or not character.is_npc:
         return True
     return character.discovered_level >= 3
+
+def set_character_photo(session: Session, character: Character, data_url: str, photos_dir, stem: str) -> str:
+    import base64
+    import binascii
+    from pathlib import Path
+    if not data_url.startswith("data:image/"):
+        raise ValueError("Envie uma imagem válida.")
+    header, separator, encoded = data_url.partition(",")
+    if not separator or not encoded:
+        raise ValueError("Imagem inválida.")
+    mime = header[5:].split(";")[0].lower()
+    extensions = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif"}
+    extension = extensions.get(mime)
+    if extension is None:
+        raise ValueError("Formato aceito: JPG, PNG, WEBP ou GIF.")
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise ValueError("Não foi possível ler a imagem.") from exc
+    if len(raw) > 5 * 1024 * 1024:
+        raise ValueError("A imagem deve ter no máximo 5 MB.")
+    photos_dir = Path(photos_dir)
+    photos_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"{stem}{extension}"
+    (photos_dir / filename).write_bytes(raw)
+    old = session.exec(select(CharacterPhoto).where(CharacterPhoto.character_id == character.id)).all()
+    for photo in old:
+        photo.is_primary = False
+        session.add(photo)
+    photo = CharacterPhoto(character_id=character.id, source="upload", path=f"/static/photos/{filename}", label="perfil", is_primary=True)
+    session.add(photo)
+    session.commit()
+    session.refresh(photo)
+    character.photo_id = photo.id
+    session.add(character)
+    session.commit()
+    return photo.path
