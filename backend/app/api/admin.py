@@ -39,11 +39,16 @@ def _char_out(c: Character, photo_url: str | None = None) -> dict:
         "profession_label": c.profession_label,
         "is_npc": c.is_npc,
         "discovered_level": c.discovered_level,
-        "money": c.money,
         "current_location_id": c.current_location_id,
         "photo_url": photo_url,
         "communication_style": c.communication_style,
         "personality": c.personality,
+        "hobbies": list(c.hobbies or []),
+        "likes": list(c.likes or []),
+        "dislikes": list(c.dislikes or []),
+        "goals": list(c.goals or []),
+        "flaws": list(c.flaws or []),
+        "favorite_location_ids": list(c.favorite_location_ids or []),
     }
 
 
