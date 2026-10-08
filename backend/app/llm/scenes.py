@@ -74,55 +74,34 @@ def build_scene_prompt(
     system_prompt = (
         "Você conduz uma cena interativa que acontece de verdade em Vila Serena. "
         "Não escreva como livro, filme, narrador épico ou RPG genérico. "
-        "A cena deve parecer uma situação cotidiana com pessoas específicas.
-
-"
-        f"Evento: "{event_title}". Local: {location_name}. Anfitrião: {host_name}. "
-        f"Participantes: {who}.
-
-"
-        "FORMATO — responda APENAS com JSON válido, sem markdown, com estas 4 chaves:
-"
-        '{"narrative": "...", "dialogue": [{"speaker": "...", "line": "..."}], "actions": [{"id": "...", "label": "...", "effects": {"memory": "...", "memory_importance": 20}, "hint": "..."}], "flags": {"complete": false}}
-
-'
-        "NATURALIDADE:
-"
+        "A cena deve parecer uma situação cotidiana com pessoas específicas.\n\n"
+        f"Evento: {event_title}. Local: {location_name}. Anfitrião: {host_name}. "
+        f"Participantes: {who}.\n\n"
+        "FORMATO — responda APENAS com JSON válido, sem markdown, com estas 4 chaves:\n"
+        '{"narrative": "...", "dialogue": [{"speaker": "...", "line": "..."}], '
+        '"actions": [{"id": "...", "label": "...", "effects": {"memory": "...", "memory_importance": 20}, "hint": "..."}], '
+        '"flags": {"complete": false}}\n\n'
+        "NATURALIDADE:\n"
         "- A narrativa descreve somente o que está acontecendo na cena. Não narre pensamentos, sentimentos ou "
-        "decisões do jogador como se fossem fatos; deixe isso para o jogador.
-"
-        "- Evite frases como 'você percebe que', 'o clima muda', 'todos parecem', 'algo no ar', "
-        "'a cena ganha vida' e outras descrições genéricas quando não houver um detalhe concreto.
-"
+        "decisões do jogador como se fossem fatos; deixe isso para o jogador.\n"
+        "- Evite frases genéricas quando não houver um detalhe concreto.\n"
         "- Não faça todos os personagens reagirem ao jogador ao mesmo tempo. Alguns podem estar ocupados, "
-        "distraídos, discordar ou nem responder.
-"
-        "- Cada fala deve ter uma razão para existir. Pessoas não precisam dizer exatamente o que sentem.
-"
+        "distraídos, discordar ou nem responder.\n"
+        "- Cada fala deve ter uma razão para existir. Pessoas não precisam dizer exatamente o que sentem.\n"
         "- Não faça diálogos excessivamente articulados. Frases incompletas, interrupções e respostas curtas "
-        "são aceitáveis quando combinarem com a pessoa.
-"
-        "- Não transforme uma situação banal em um grande momento. Pequenos acontecimentos também podem ser o resultado.
-"
-        "- Não termine cada rodada com suspense, lição, revelação ou mudança de relacionamento.
-"
+        "são aceitáveis quando combinarem com a pessoa.\n"
+        "- Não transforme uma situação banal em um grande momento. Pequenos acontecimentos também podem ser o resultado.\n"
+        "- Não termine cada rodada com suspense, lição, revelação ou mudança de relacionamento.\n"
         "- Não trate todas as ações do jogador como boas decisões. Pessoas podem reagir mal, ignorar, discordar "
-        "ou simplesmente seguir a própria rotina.
-
-"
+        "ou simplesmente seguir a própria rotina.\n\n"
         f"CONTINUIDADE: a última ação foi: {action_text}. A ação livre, se houver, é: {free_text_text}. "
-        "Use as cenas anteriores para manter continuidade, mas não repita informações apenas para mostrar que lembra.
-
-"
+        "Use as cenas anteriores para manter continuidade, mas não repita informações apenas para mostrar que lembra.\n\n"
         "AÇÕES: gere 3 a 5 opções concretas e diferentes entre si. Elas são sugestões, não limites. "
         "Uma ação pode ser banal, social, inconveniente, impulsiva ou encerrar a participação. "
         "Não use sempre observar/conversar/ajudar/ir embora com palavras diferentes. "
-        "Os effects representam consequências possíveis e devem ser específicos ao que aconteceu.
-
-"
+        "Os effects representam consequências possíveis e devem ser específicos ao que aconteceu.\n\n"
         "ENCERRAMENTO: flags.complete=true somente se a situação realmente terminou ou perdeu seu motivo "
-        "para continuar. Não encerre a cena só porque houve uma boa fala ou uma pequena decisão.
-"
+        "para continuar. Não encerre a cena só porque houve uma boa fala ou uma pequena decisão.\n"
         "Escreva narrative em 2 a 4 frases curtas e dialogue com 1 a 3 falas. Não faça monólogos."
     )
     user_prompt = (
@@ -202,6 +181,7 @@ async def generate_scene(
         "actions": actions,
         "_flags": data.get("flags") if isinstance(data.get("flags"), dict) else None,
     }
+
 
 OUTCOME_SYSTEM = (
     "Você resume uma experiência que aconteceu de verdade em Vila Serena. "
