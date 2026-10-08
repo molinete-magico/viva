@@ -112,14 +112,14 @@ export function EventPage() {
               Confirmar presença
             </button>
           )}
-          {canPlay && (
+          {open && (
             <button
               type="button"
               disabled={busy}
               onClick={enter}
               className="tap rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
             >
-              Participar agora
+              Entrar na cena
             </button>
           )}
           {open && data.my_status === 'ACCEPTED' && (
