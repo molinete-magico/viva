@@ -21,46 +21,78 @@ FALLBACK_ACTIONS = [
 ]
 
 
-def _fallback_scene(*, event_title: str, event_description: str, participants: list[str], player_name: str, turn_index: int, last_action: str | None = None, free_text_action: str | None = None) -> dict[str, Any]:
-    """Fallback contextualizado quando o LLM não consegue produzir uma cena válida."""
+def _fallback_scene(
+    *,
+    event_title: str,
+    event_description: str,
+    participants: list[str],
+    player_name: str,
+    turn_index: int,
+    last_action: str | None = None,
+    free_text_action: str | None = None,
+    narrative_so_far: list[str] | None = None,
+) -> dict[str, Any]:
+    """Last-resort scene that still follows the immediate conversation."""
     people = [p for p in participants if p and p != player_name]
     subject = people[0] if people else None
     detail = event_description.strip() or event_title
     action = (free_text_action or last_action or "").strip()
-    lower = action.lower()
+    lower = action.casefold()
+    history = "\n".join(narrative_so_far[-6:]) if narrative_so_far else ""
 
     if turn_index == 0:
-        narrative = f"{detail}. {subject} está com você na situação." if subject else f"{detail}. A situação começa sem outro participante identificado."
-        line = "Oi." if subject else None
+        narrative = (
+            f"{detail}. {subject} está com você e a atividade começa sem pressa."
+            if subject
+            else f"{detail}. A situação começa."
+        )
+        line = "E aí. Chegou na hora boa." if subject else None
     elif subject:
-        if any(word in lower for word in ("como você está", "tudo de boa", "e aí", "oi", "opa")):
-            narrative = f"{subject} reconhece a chegada e entra no papo, sem interromper o que vocês vieram fazer."
-            line = "Tô de boa. E você?"
-        elif any(word in lower for word in ("o que", "qual", "quer escutar", "vamos ouvir", "vamos colocar", "vinil", "disco")):
-            narrative = f"{subject} olha para os discos e começa a pensar no que faz sentido colocar primeiro."
-            line = "Tava pensando em colocar um dos que eu separei aqui. Quer escolher?"
-        elif any(word in lower for word in ("só uhum", "fala alguma coisa", "responde", "conversa")):
-            narrative = f"{subject} percebe que respondeu curto demais e finalmente desenvolve a resposta."
-            line = "Foi mal. Tô meio desligado hoje. Quer escolher um disco?"
+        if any(term in lower for term in ("como você está", "tudo de boa", "e aí", "oi", "opa")):
+            narrative = f"{subject} responde ao cumprimento e mantém a atenção no que vocês vieram fazer."
+            line = "Tô de boa. Só tava mexendo nisso aqui. E você?"
+        elif any(term in lower for term in ("quer escutar", "o que", "qual", "vamos ouvir", "vinil", "disco", "música", "metallica", "metallica", "red hot")):
+            narrative = f"{subject} olha para a coleção de discos e começa a separar algumas opções."
+            line = "Bora. Tenho uns aqui que combinam. Quer escolher ou deixo eu decidir?"
+        elif any(term in lower for term in ("só uhum", "fala alguma coisa", "conversa", "responde", "tá quieto", "ta quieto")):
+            narrative = f"{subject} percebe que estava respondendo no automático e volta a prestar atenção na conversa."
+            line = "Foi mal, tava viajando. Eu tava pensando justamente no que colocar primeiro."
+        elif any(term in lower for term in ("sim", "bora", "vamos", "quero", "pode ser", "manda a boa")):
+            narrative = f"{subject} entende a ideia e começa a agir sobre ela, em vez de deixar a conversa parada."
+            line = "Então fechou. Deixa eu pegar aqui."
         else:
-            narrative = f"{subject} acompanha o que você disse e responde de um jeito próprio, mantendo o assunto da cena."
-            line = "Pode ser. Me diz o que você quer fazer."
+            narrative = f"{subject} leva em conta o que você acabou de dizer e responde sem mudar o assunto à força."
+            line = "Pode ser. Espera, deixa eu pensar nisso direito."
     else:
-        narrative = "A situação continua a partir do que aconteceu na rodada anterior."
+        narrative = "A situação continua a partir da última coisa que aconteceu."
         line = None
 
     dialogue = [{"speaker": subject, "line": line}] if subject and line else []
     return {
         "narrative": narrative[:8000],
         "dialogue": dialogue,
-        "actions": [dict(action) for action in FALLBACK_ACTIONS],
+        "actions": [
+            {"id": "seguir_assunto", "label": "Continuar o assunto", "effects": {}, "hint": "seguir a conversa"},
+            {"id": "observar", "label": "Prestar atenção no que está acontecendo", "effects": {}, "hint": "ver o que acontece"},
+            {"id": "mudar_assunto", "label": "Puxar outro assunto", "effects": {}, "hint": "mudar o rumo da conversa"},
+            {"id": "encerrar", "label": "Dizer que já vai embora", "effects": {}, "hint": "encerrar a situação"},
+        ],
     }
 
 
-def _dialogue_is_usable(dialogue: Any, participants: list[str], player_name: str) -> bool:
+def _dialogue_is_usable(
+    dialogue: Any,
+    participants: list[str],
+    player_name: str,
+    previous_lines: list[str] | None = None,
+) -> bool:
     if not isinstance(dialogue, list):
         return False
     allowed = {p.strip().casefold() for p in participants if p and p.strip() and p != player_name}
+    if allowed and not dialogue:
+        return False
+    previous = {line.strip().casefold() for line in (previous_lines or []) if line.strip()}
+    generic = {"uhum", "hum", "hmm", "oi", "ok", "tá", "ta", "sim", "beleza", "pode ser"}
     for item in dialogue[:3]:
         if not isinstance(item, dict):
             return False
@@ -68,9 +100,12 @@ def _dialogue_is_usable(dialogue: Any, participants: list[str], player_name: str
         line = str(item.get("line", "")).strip()
         if not speaker or not line:
             return False
-        if speaker.casefold() not in allowed:
+        if allowed and speaker.casefold() not in allowed:
             return False
-        if line.casefold() in {"uhum", "hum", "hmm", "oi", "ok", "tá", "ta", "sim"}:
+        normalized = line.casefold()
+        if normalized in generic or normalized in previous:
+            return False
+        if len(line.split()) < 2:
             return False
     return True
 
@@ -105,49 +140,62 @@ def build_scene_prompt(
     action_text = last_action or "(ainda não agiu)"
     free_text_text = free_text_action or "(nenhuma ação livre)"
     system_prompt = (
-        "Você conduz uma cena interativa que acontece de verdade em Vila Serena. "
-        "Não escreva como livro, filme, narrador épico ou RPG genérico. "
-        "A cena deve parecer uma situação cotidiana com pessoas específicas.\n\n"
-        f"Evento: {event_title}. Anfitrião: {host_name}.\n"
-        f"Descrição: {event_description or event_title}.\n"
-        f"Participantes: {who}.\n"
-        f"Contexto de cada participante:\n{participant_context}\n\n"
-        "FORMATO — responda APENAS com JSON válido, sem markdown, com estas 4 chaves:\n"
-        '{"narrative": "...", "dialogue": [{"speaker": "...", "line": "..."}], '
-        '"actions": [{"id": "...", "label": "...", "effects": {"memory": "...", "memory_importance": 20}, "hint": "..."}], '
-        '"flags": {"complete": false}}\n\n'
-        "NATURALIDADE:\n"
-        "- Nunca copie, cite ou parafraseie literalmente a ação do jogador dentro de narrative ou dialogue.\n"
-        "- A ação do jogador já aparece separada na interface; descreva apenas a reação do mundo e dos outros personagens.\n"
-        "- A narrativa descreve somente o que está acontecendo na cena. Não narre pensamentos, sentimentos ou "
-        "decisões do jogador como se fossem fatos; deixe isso para o jogador.\n"
-        "- Evite frases genéricas quando não houver um detalhe concreto.\n"
-        "- Não faça todos os personagens reagirem ao jogador ao mesmo tempo. Alguns podem estar ocupados, "
-        "distraídos, discordar ou nem responder.\n"
-        "- Cada fala deve ter uma razão para existir. Pessoas não precisam dizer exatamente o que sentem.\n"
-        "- Não faça diálogos excessivamente articulados. Frases incompletas, interrupções e respostas curtas "
-        "são aceitáveis quando combinarem com a pessoa.\n"
-        "- Não transforme uma situação banal em um grande momento. Pequenos acontecimentos também podem ser o resultado.\n"
-        "- Não termine cada rodada com suspense, lição, revelação ou mudança de relacionamento.\n"
-        "- Não trate todas as ações do jogador como boas decisões. Pessoas podem reagir mal, ignorar, discordar "
-        "ou simplesmente seguir a própria rotina.\n\n"
-        f"CONTINUIDADE: a última ação foi: {action_text}. A ação livre, se houver, é: {free_text_text}. "
-        "Use as cenas anteriores para manter continuidade, mas não repita informações apenas para mostrar que lembra.\n\n"
-        "AÇÕES: gere 3 a 5 opções concretas e diferentes entre si. Elas são sugestões, não limites. "
-        "Uma ação pode ser banal, social, inconveniente, impulsiva ou encerrar a participação. "
-        "Não use sempre observar/conversar/ajudar/ir embora com palavras diferentes. "
-        "Os effects representam consequências possíveis e devem ser específicos ao que aconteceu.\n\n"
-        "ENCERRAMENTO: flags.complete=true somente se a situação realmente terminou ou perdeu seu motivo "
-        "para continuar. Não encerre a cena só porque houve uma boa fala ou uma pequena decisão.\n"
-        "Escreva narrative em 2 a 4 frases curtas e dialogue com 1 a 3 falas. Não faça monólogos."
-    )
-    user_prompt = (
+        "Você conduz uma situação social interativa em Vila Serena. "
+        "A pessoa jogadora está vivendo a situação com moradores que têm personalidade, memória, objetivos e vontade própria. "
+        "O objetivo não é contar uma história pronta: é simular o que aconteceria se a pessoa realmente estivesse ali.\n\n"
+        f"Situação: {event_title}. Anfitrião: {host_name}.\n"
+        f"Contexto: {event_description or event_title}.\n"
+        f"Pessoas realmente presentes: {who}.\n"
+        f"Informações dos personagens:\n{participant_context}\n\n"
+        "REGRA CENTRAL — REAÇÃO CAUSAL:\n"
+        "- A ÚLTIMA AÇÃO DO JOGADOR é o acontecimento mais importante desta rodada. "
+        "Responda a ela diretamente. Não gere uma resposta genérica que serviria para qualquer ação.\n"
+        "- Se o jogador fizer uma pergunta, responda à pergunta. Se escolher algo, execute ou discuta essa escolha. "
+        "Se provocar, discordar, brincar ou mudar de assunto, deixe isso alterar a reação.\n"
+        "- A pessoa NPC não existe para concordar com o jogador. Ela pode gostar, não gostar, hesitar, corrigir, "
+        "ignorar, mudar de assunto, estar distraída ou propor outra coisa.\n"
+        "- Uma ação pode mudar o estado da situação: um disco pode ser colocado, uma conversa pode avançar, "
+        "alguém pode pegar um objeto, levantar, mostrar algo, interromper ou decidir ir embora. "
+        "Não deixe tudo parado só porque a interação é social.\n"
+        "- NÃO escreva 'reage ao que aconteceu', 'mantém a conversa em andamento', 'a situação continua' "
+        "ou equivalentes. Mostre o que a pessoa efetivamente faz ou diz.\n"
+        "- NÃO use respostas vazias como 'Uhum', 'Pode ser', 'Ok', 'Sim' isoladamente. "
+        "Uma resposta curta ainda precisa carregar intenção ou informação.\n"
+        "- Não copie a ação do jogador como diálogo. A ação já aparece na interface.\n"
+        "- Não narre pensamentos ou decisões do jogador como fatos.\n\n"
+        "CONTINUIDADE:\n"
+        "O histórico abaixo é a memória desta situação. Continue exatamente de onde parou. "
+        "Não reinicie a cena a cada turno e não trate cada turno como uma cena independente. "
+        "Se alguém acabou de falar sobre música, continue com música até existir motivo para mudar. "
+        "Se uma escolha foi feita, mostre sua consequência física ou social antes de abrir outro assunto.\n\n"
+        "PERSONALIDADE:\n"
+        "Use os dados do personagem como tendência, não como lista de adjetivos. "
+        "O personagem deve ter preferências concretas, maneira própria de falar e limites. "
+        "Não faça todo NPC soar igual.\n\n"
+        "RITMO:\n"
+        "Cada rodada deve mover a situação um pequeno passo. Pode haver silêncio, mas não pode haver estagnação repetida. "
+        "Alterne fala, ação física, reação e oportunidade para o jogador. Não transforme cada rodada em exposição.\n\n"
+        "FORMATO — JSON válido, sem markdown:\n"
+        '{"narrative":"...", "dialogue":[{"speaker":"NOME_EXATO","line":"..."}], '
+        '"actions":[{"id":"...","label":"...","effects":{},"hint":"..."}], '
+        '"flags":{"complete":false}}\n\n'
+        "NARRATIVE: 1 a 3 frases. Descreva acontecimentos observáveis, principalmente reações dos NPCs e mudanças na situação.\n"
+        "DIALOGUE: 1 a 3 falas. Use somente nomes que estão em 'Pessoas realmente presentes'. "
+        "Cada fala deve responder ao contexto e soar como algo que aquela pessoa diria.\n"
+        "AÇÕES: 3 a 5 possibilidades específicas para ESTE momento. Elas são opções, não comandos obrigatórios. "
+        "Evite opções genéricas como 'observar' ou 'conversar' se houver algo concreto para fazer. "
+        "Os efeitos devem representar somente consequências plausíveis e pequenas; não invente autoridade sobre o mundo.\n"
+        "ENCERRAMENTO: use flags.complete=true somente quando a situação realmente tiver terminado, perdido o propósito "
+        "ou o jogador tiver decidido sair. Uma conversa ainda pode continuar indefinidamente."
+    )    user_prompt = (
         f"Contexto: {chronology}.\n"
-        f"Você é {player_name}. O anfitrião é {host_name}.\n"
-        f"Cenas anteriores:\n{history}\n\n"
-        f"Ação livre do jogador nesta rodada: {free_text_text}\n"
-        "Continue a situação a partir do que realmente aconteceu. Se houver ação livre, ela tem prioridade "
-        "sobre as opções sugeridas."
+        f"Jogador: {player_name}. Anfitrião: {host_name}.\n\n"
+        f"HISTÓRICO COMPLETO RECENTE:\n{history}\n\n"
+        f"ÚLTIMA AÇÃO DO JOGADOR: {action_text}\n"
+        f"AÇÃO LIVRE ORIGINAL, se houver: {free_text_text}\n\n"
+        "Agora produza a próxima batida da situação. Primeiro interprete o que o jogador acabou de fazer; "
+        "depois mostre uma consequência concreta disso no mundo ou na reação do NPC; por fim, deixe espaço "
+        "para o jogador decidir o próximo passo. Não volte ao estado inicial da cena."
     )
     return system_prompt, user_prompt
 
@@ -197,6 +245,7 @@ async def generate_scene(
             turn_index=turn_index,
             last_action=last_action,
             free_text_action=free_text_action,
+            narrative_so_far=narrative_so_far,
         )
     data = _extract_json(text)
     if data is None:
@@ -213,7 +262,11 @@ async def generate_scene(
     dialogue = data.get("dialogue") if isinstance(data.get("dialogue"), list) else []
     actions = data.get("actions") if isinstance(data.get("actions"), list) else []
     actions = [a for a in actions if isinstance(a, dict) and a.get("id") and a.get("label")][:5]
-    if not narrative or not actions or not _dialogue_is_usable(dialogue, participants, player_name):
+    previous_lines = []
+    for item in narrative_so_far[-8:]:
+        if ":" in item and not item.startswith("Cena:"):
+            previous_lines.append(item.split(":", 1)[1].strip())
+    if not narrative or not actions or not _dialogue_is_usable(dialogue, participants, player_name, previous_lines):
         return _fallback_scene(
             event_title=event_title,
             event_description=event_description,
