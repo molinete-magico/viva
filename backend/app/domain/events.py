@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from app.domain.errors import ServiceError
 
-EVENT_SCHEDULED = "SCHEDULED"
 EVENT_OPEN = "OPEN"
 EVENT_ACTIVE = "ACTIVE"
 EVENT_COMPLETED = "COMPLETED"
@@ -19,7 +18,6 @@ SESSION_COMPLETED = "COMPLETED"
 SESSION_ABANDONED = "ABANDONED"
 
 _EVENT_TRANSITIONS: dict[str, dict[str, str]] = {
-    EVENT_SCHEDULED: {"open": EVENT_OPEN, "start": EVENT_ACTIVE, "cancel": EVENT_CANCELLED},
     EVENT_OPEN: {"start": EVENT_ACTIVE, "cancel": EVENT_CANCELLED},
     EVENT_ACTIVE: {"complete": EVENT_COMPLETED, "cancel": EVENT_CANCELLED},
     EVENT_COMPLETED: {},
