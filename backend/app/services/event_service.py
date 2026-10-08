@@ -318,7 +318,6 @@ def _scene(
         generate_scene(
             get_provider(),
             event_title=event.title,
-            location_name="",
             host_name=host.name if host else "o anfitrião",
             participants=_scene_participant_names(participants, character.name),
             player_name=character.name,
@@ -522,7 +521,7 @@ def end_session(session: Session, character: Character, session_id: int, summary
     event_session.status = de.transition_session(event_session.status, "complete")
     event_session.ended_at = utcnow()
     session.add(event_session)
-    if event.status in (de.EVENT_ACTIVE, de.EVENT_OPEN, de.EVENT_SCHEDULED):
+    if event.status in (de.EVENT_ACTIVE, de.EVENT_OPEN):
         event.status = de.transition_event(event.status, "complete")
         session.add(event)
 
