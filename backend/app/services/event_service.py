@@ -18,7 +18,6 @@ from app.models import (
     EventSession,
     EventTurn,
     FutureHook,
-    Location,
     Notification,
     WorldState,
 )
@@ -63,7 +62,7 @@ def _npc_participants(session: Session, event: Event, exclude_id: int | None = N
     ids = session.exec(
         select(EventParticipant.character_id).where(
             EventParticipant.event_id == event.id,
-            EventParticipant.status.in_(["JOINED", "ACCEPTED", "INVITED"]),
+            EventParticipant.status.in_(["JOINED", "ACCEPTED"]),
         )
     ).all()
     char_ids = [row[0] if isinstance(row, tuple) else row for row in ids]
@@ -89,9 +88,6 @@ def _scene_participant_names(participants: list[Character], player_name: str) ->
 
 
 def create_event(session: Session, host: Character, req: CreateEventRequest) -> Event:
-    location = session.get(Location, req.location_id)
-    if location is None:
-        raise ServiceError("Local do evento não existe.", 400)
     invitee_ids: list[int] = []
     seen_conversations: set[int] = set()
     for conversation_id in req.invite_conversation_ids:
@@ -119,7 +115,7 @@ def create_event(session: Session, host: Character, req: CreateEventRequest) -> 
     event = Event(
         title=req.title.strip(),
         description=req.description.strip(),
-        location_id=req.location_id,
+        location_id=None,
         host_character_id=host.id,
         created_by="system" if host.is_npc else "player",
         scheduled_at=None,
@@ -157,7 +153,6 @@ def create_event(session: Session, host: Character, req: CreateEventRequest) -> 
             {
                 "event_id": event.id,
                 "title": event.title,
-                "location_name": location.name,
                 "scheduled_at": None,
                 "chronology": f"{world['day_name']} {world['date']} {world['time']}",
             },
@@ -304,7 +299,6 @@ def _scene(
     free_text_action: str | None = None,
 ) -> dict:
     participants = _npc_participants(session, event, exclude_id=character.id)
-    location = session.get(Location, event.location_id) or Location(name="na cidade")
     world = _world_chronology(session)
     narrative_rows = session.exec(
         select(EventTurn.narrative)
@@ -319,7 +313,7 @@ def _scene(
         generate_scene(
             get_provider(),
             event_title=event.title,
-            location_name=location.name,
+            location_name="",
             host_name=host.name if host else "o anfitrião",
             participants=_scene_participant_names(participants, character.name),
             player_name=character.name,
@@ -372,11 +366,6 @@ def perform_action(
     effects = (chosen.get("effects") if chosen else {}) or {}
     effective_label = chosen.get("label") if chosen else free_text.strip()[:1000]
 
-    money = effects.get("money")
-    if money:
-        character.money = round((character.money or 0) + float(money), 2)
-        session.add(character)
-
     mem_text = effects.get("memory")
     if mem_text:
         targets = _npc_participants(session, event, exclude_id=character.id)
@@ -387,21 +376,29 @@ def perform_action(
             content=str(mem_text)[:2000],
             category="EVENT",
             kind="event_memory",
-            importance=int(effects.get("memory_importance", 30)),
+            importance=max(1, min(100, int(effects.get("memory_importance", 30) or 30))),
             source_event_id=event.id,
             dedupe_key=f"event-{event.id}-turn-{turn.turn_index}",
         )
 
     npc_targets = _npc_participants(session, event, exclude_id=character.id)
     action_effects = effects.get("relationship")
-    if action_effects and npc_targets:
-        target_id = int(action_effects.get("character_id") or npc_targets[0].id)
-        target = session.get(Character, target_id)
-        if target is None or not target.is_npc:
-            target_id = npc_targets[0].id
-        deltas = {k: v for k, v in action_effects.items() if k in de.DIMENSIONS}
-        if deltas:
-            rel.apply_changes(session, character.id, target_id, deltas, log=True)
+    if isinstance(action_effects, dict) and npc_targets:
+        target_ids = {npc.id for npc in npc_targets if npc.id is not None}
+        raw_target = action_effects.get("character_id")
+        try:
+            requested_target = int(raw_target) if raw_target is not None else None
+        except (TypeError, ValueError):
+            requested_target = None
+        target_id = requested_target if requested_target in target_ids else next(iter(target_ids), None)
+        if target_id is not None:
+            deltas: dict[str, int] = {}
+            for key in de.DIMENSIONS:
+                raw = action_effects.get(key)
+                if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+                    deltas[key] = max(-5, min(5, int(raw)))
+            if deltas:
+                rel.apply_changes(session, character.id, target_id, deltas, log=True)
 
     scene = _scene(
         session,
