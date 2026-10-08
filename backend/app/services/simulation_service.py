@@ -75,7 +75,7 @@ def run_catchup(session: Session, *, with_social: bool = True, minutes: int | No
     from app.services.event_service import check_open_events, recover_stale_event_sessions
     from app.services.messaging_service import idle_conversation_sessions
 
-    check_open_events(session)
+    check_open_events(session, until_dt)
     stale_sessions = recover_stale_event_sessions(session)
     idle_sessions = idle_conversation_sessions(session)
     future_social = process_due_future_hooks(session, simulated_now=until_dt)
