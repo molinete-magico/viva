@@ -161,7 +161,7 @@ def create_event(session: Session, host: Character, req: CreateEventRequest) -> 
                 status=invitee_status,
                 responded_at=utcnow() if invitee_status == de.PARTICIPANT_ACCEPTED else None,
             )
-        )        )
+        )
     session.commit()
     player_invitees = session.exec(
         select(Character).where(Character.id.in_(invitee_ids), Character.user_id.is_not(None))
