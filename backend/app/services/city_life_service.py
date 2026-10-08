@@ -592,15 +592,43 @@ def event_social_echo(session: Session, moment: datetime) -> tuple[int, list[str
         marker = key("event-echo", event.id)
         if already(session, host.id, marker):
             continue
-        session.add(Post(
-            author_character_id=host.id,
-            content=f"Foi bom encontrar gente em {event.title}.",
-            kind="event",
-            location_id=event.location_id,
-            event_id=event.id,
-            created_at=moment,
-        ))
-        session.commit()
+        participants = session.exec(
+            select(EventParticipant).where(
+                EventParticipant.event_id == event.id,
+                EventParticipant.status.in_(["JOINED", "ACCEPTED"]),
+            )
+        ).all()
+        names = []
+        for participant in participants:
+            person = session.get(Character, participant.character_id)
+            if person is not None and person.id != host.id:
+                names.append(person.name)
+        participant_text = ", ".join(names[:4]) or "ninguém além de mim"
+        try:
+            from app.services.llm_service import generate_npc_post
+            post = generate_npc_post(
+                session,
+                host,
+                simulated_at=moment,
+                extra_context=(
+                    f"Acabei de participar de uma atividade chamada '{event.title}'. "
+                    f"Descrição: {event.description}. Outras pessoas que participaram: {participant_text}. "
+                    "Se fizer sentido para esta pessoa, transforme algum detalhe disso em uma publicação curta."
+                ),
+            )
+            post.kind = "event"
+            post.event_id = event.id
+            session.add(post)
+            session.commit()
+        except Exception:
+            session.add(Post(
+                author_character_id=host.id,
+                content=f"{event.description.strip() or event.title} — com {participant_text}.",
+                kind="event",
+                event_id=event.id,
+                created_at=moment,
+            ))
+            session.commit()
         remember(session, host, None, f"Compartilhei um pequeno eco de {event.title} no feed.", "event_social_echo", marker, moment, 22)
         actions += 1
         highlights.append(f"{host.name} comentou sobre {event.title}")
