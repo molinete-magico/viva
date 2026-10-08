@@ -10,7 +10,6 @@ from app.models import (
     EventParticipant,
     EventSession,
     EventTurn,
-    Location,
     User,
 )
 from app.schemas.common import Listing
@@ -40,22 +39,14 @@ def _to_out(session: Session, event: Event, viewer_id: int | None, counts: dict,
         id=event.id,
         title=event.title,
         description=event.description,
-        scheduled_at=event.scheduled_at,
         status=event.status,
         kind=event.kind,
-        location_id=event.location_id,
-        location_name=_location_name(session, event.location_id),
         host_character_id=event.host_character_id,
         host_name=host.name if host else "",
         participant_count=counts.get(event.id, 0),
         my_status=my.get(event.id),
         cancel_reason=event.cancel_reason,
     )
-
-
-def _location_name(session: Session, location_id: int) -> str:
-    location = session.get(Location, location_id)
-    return location.name if location else ""
 
 
 def _turn_out(turn: EventTurn) -> TurnOut:
