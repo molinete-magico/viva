@@ -24,7 +24,7 @@ const emptyForm = {
   title: '',
   description: '',
   location_id: 0,
-  invitees: '',
+  invite_conversation_ids: [] as number[],
 }
 
 export function EventsPage() {
@@ -35,6 +35,7 @@ export function EventsPage() {
   const [onlyMine, setOnlyMine] = useState(false)
   const events = useFetch<Listing<EventItem>>(onlyMine ? '/events?mine=true' : '/events', [onlyMine])
   const locations = useFetch<Listing<Location>>('/world/locations')
+  const conversations = useFetch<Listing<Conversation>>('/conversations')
 
   async function createEvent() {
     setSaving(true)
@@ -42,17 +43,13 @@ export function EventsPage() {
     try {
       if (!form.title.trim()) throw new Error('Dê um título ao evento.')
       if (!form.location_id) throw new Error('Escolha onde vai rolar.')
-      const invitees = form.invitees
-        .split(',')
-        .map((v) => Number(v.trim()))
-        .filter((v) => Number.isFinite(v) && v > 0)
       await api<EventItem>('/events', {
         method: 'POST',
         body: {
           title: form.title,
           description: form.description,
           location_id: form.location_id,
-          invitees,
+          invite_conversation_ids: form.invite_conversation_ids,
         },
       })
       setForm(emptyForm)
@@ -124,12 +121,45 @@ export function EventsPage() {
               {(locations.data?.items ?? []).map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
             </select>
           </div>
-          <input
-            value={form.invitees}
-            onChange={(e) => setForm({ ...form, invitees: e.target.value })}
-            placeholder="Convidar por código de personagem (ex.: 2, 4) — opcional"
-            className="w-full rounded-xl border border-line bg-paper px-3 py-2 text-sm text-ink outline-none focus:border-accent"
-          />
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-soft">Convidar moradores</p>
+            {conversations.loading ? (
+              <p className="text-xs text-ink-faint">Carregando conversas…</p>
+            ) : conversations.error ? (
+              <p className="text-xs text-warn">{conversations.error}</p>
+            ) : (conversations.data?.items.length ?? 0) === 0 ? (
+              <p className="text-xs text-ink-faint">Você ainda não tem conversas para convidar alguém.</p>
+            ) : (
+              <ul className="divide-y divide-line border-y border-line">
+                {(conversations.data?.items ?? []).map((conversation) => {
+                  const selected = form.invite_conversation_ids.includes(conversation.id)
+                  return (
+                    <li key={conversation.id}>
+                      <label className="flex cursor-pointer items-center gap-3 px-2 py-2.5 hover:bg-paper">
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => {
+                            const ids = selected
+                              ? form.invite_conversation_ids.filter((id) => id !== conversation.id)
+                              : [...form.invite_conversation_ids, conversation.id]
+                            setForm({ ...form, invite_conversation_ids: ids })
+                          }}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-ink">{conversation.partner.name}</p>
+                          <p className="text-[11px] text-ink-faint">Conversa #{conversation.id}</p>
+                        </div>
+                      </label>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+            <p className="mt-2 text-[11px] text-ink-faint">
+              O convite usa o ID da conversa por baixo; o nome é apenas para facilitar a escolha.
+            </p>
+          </div>
           <button
             type="submit"
             disabled={saving}
