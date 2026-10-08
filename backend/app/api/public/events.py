@@ -104,7 +104,7 @@ def list_events(
     session: Session = Depends(get_session),
 ):
     viewer_id = user.active_character_id
-    query = select(Event).order_by(Event.scheduled_at.asc()).limit(200)
+    query = select(Event).order_by(Event.created_at.desc()).limit(200)
     events = session.exec(query).all()
     if not events:
         return Listing(items=[])
