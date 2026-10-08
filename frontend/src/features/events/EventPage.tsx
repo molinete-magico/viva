@@ -5,7 +5,7 @@ import { ErrorState, Spinner, useFetch, WarningBanner } from '../../components/u
 import type { EventDetail } from '../../types/api'
 
 const STATUS_LABELS: Record<string, string> = {
-  SCHEDULED: 'Marcado',
+  SCHEDULED: 'Disponível',
   OPEN: 'Aberto',
   ACTIVE: 'Acontecendo agora',
   COMPLETED: 'Encerrado',
@@ -91,7 +91,7 @@ export function EventPage() {
           </span>
         </div>
         <p className="mt-2 text-sm text-ink-soft">
-          {data.location_name ? `📍 ${data.location_name}` : 'Na cidade'}
+          Situação aberta · participe quando quiser
         </p>
         {data.description && <p className="mt-3 text-sm leading-relaxed text-ink-soft">{data.description}</p>}
         {data.cancel_reason && (
@@ -136,7 +136,7 @@ export function EventPage() {
               onClick={cancelEvent}
               className="tap rounded-full border border-line bg-paper px-4 py-2 text-sm font-medium text-ink-soft transition hover:border-warn/40"
             >
-              Cancelar evento
+              Cancelar atividade
             </button>
           )}
         </div>
