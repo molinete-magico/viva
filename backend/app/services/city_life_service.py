@@ -304,56 +304,51 @@ def rivalry_avoidance(session: Session, moment: datetime) -> tuple[int, list[str
 
 
 def social_opportunities(session: Session, moment: datetime) -> tuple[int, list[str]]:
-    """Cria convites leves quando um grupo compatível está reunido, sem exigir ação do jogador."""
+    """Cria pequenas situações sociais sem transformar o relógio ou locais em agenda."""
     npcs = session.exec(select(Character).where(Character.is_npc.is_(True))).all()
-    actions = 0
-    highlights: list[str] = []
-    by_location: dict[int, list[Character]] = {}
+    actions, highlights = 0, []
+    by_group: dict[int, list[Character]] = {}
     for npc in npcs:
-        if npc.current_location_id is not None:
-            by_location.setdefault(npc.current_location_id, []).append(npc)
-    for location_id, people in by_location.items():
+        if npc.id is not None:
+            by_group.setdefault(npc.id % 7, []).append(npc)
+    for group_id, people in by_group.items():
         if len(people) < 3:
             continue
         host = max(people, key=lambda p: _social_personality(p)[0])
         if host.id is None:
             continue
-        marker = key("social-opportunity", location_id, moment.date())
+        marker = key("social-opportunity", group_id, moment.date())
         if already(session, host.id, marker):
             continue
-        if score(f"opportunity:{location_id}:{moment.date()}") > 0.35:
-            continue
-        location = session.get(Location, location_id)
-        if location is None:
+        if score(f"opportunity:{group_id}:{moment.date()}") > 0.35:
             continue
         event = Event(
-            title=f"Encontro espontâneo em {location.name}",
+            title=f"Encontro espontâneo de {host.name}",
             description="Um pequeno grupo resolveu continuar junto depois de se encontrar.",
             kind="ambient",
             status="OPEN",
-            scheduled_at=moment + timedelta(minutes=30),
-            location_id=location.id,
+            scheduled_at=None,
+            location_id=None,
             host_character_id=host.id,
+            created_by="system",
+            max_participants=5,
         )
         session.add(event)
         session.commit()
         session.refresh(event)
-        selected = people[:5]
-        for person in selected:
+        for person in people[:5]:
             if person.id == host.id:
                 continue
             session.add(EventParticipant(
                 event_id=event.id,
                 character_id=person.id,
                 status="INVITED",
-                invited_at=moment,
             ))
         session.commit()
-        remember(session, host, None, f"Convidei algumas pessoas para um encontro espontâneo em {location.name}.", "social_opportunity", marker, moment, 35)
+        remember(session, host, None, "Convidei algumas pessoas para um encontro espontâneo.", "social_opportunity", marker, moment, 35)
         actions += 1
-        highlights.append(f"Um grupo marcou um encontro em {location.name}")
+        highlights.append(f"{host.name} criou um encontro espontâneo")
     return actions, highlights[:6]
-
 
 def local_discovery(session: Session, moment: datetime) -> tuple[int, list[str]]:
     """Moradores descobrem lugares novos e isso passa a influenciar sua memória."""
